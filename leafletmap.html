@@ -1,0 +1,82 @@
+<!--
+ * @Date: 2024-07-24 21:01:10
+ * @LastEditors: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
+ * @LastEditTime: 2024-07-28 22:45:54
+ * @FilePath: \adsb\leafletmap.html
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map</title>
+    <meta charset="utf-8">
+    <style>
+        #map { height: 100%; width: 100%; }
+        html, body { height: 100%; margin: 0; padding: 0; }
+    </style>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=YOUR_API_KEY"></script>
+    <script>
+        var map;
+        var markers = {};
+        var infoWindow;
+
+        function initMap() {
+            map = new AMap.Map('map', {
+                center: [116.404, 39.915],
+                zoom: 13,
+                mapStyle: 'amap://styles/light',
+                resizeEnable: true,
+                viewMode: '3D'
+            });
+
+            infoWindow = new AMap.InfoWindow({
+                offset: new AMap.Pixel(0, -30),
+                closeWhenClickMap: true
+            });
+
+            map.on('complete', function() {
+                // Map loaded successfully
+            });
+        }
+
+        function addCustomMarker(id, lng, lat, angle) {
+            var marker = new AMap.Marker({
+                position: new AMap.LngLat(lng, lat),
+                icon: new AMap.Icon({
+                    size: new AMap.Size(32, 32),
+                    image: "plane.png",
+                    imageSize: new AMap.Size(32, 32)
+                }),
+                angle: angle
+            });
+
+            marker.content = id;
+            marker.on('click', function(e) {
+                infoWindow.setContent(e.target.content);
+                infoWindow.open(map, e.target.getPosition());
+            });
+
+            markers[id] = marker;
+            map.add(marker);
+        }
+
+        function updateMarker(id, lng, lat, angle) {
+            var marker = markers[id];
+            if (marker) {
+                marker.setPosition(new AMap.LngLat(lng, lat));
+                marker.setAngle(angle);
+            }
+        }
+        function removeMarker(id) {
+            var marker = markers[id];
+            if (marker) {
+                map.remove(marker);
+                delete markers[id];
+            }
+        }
+        window.onload = initMap;
+    </script>
+</head>
+<body>
+    <div id="map"></div>
+</body>
+</html>

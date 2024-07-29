@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>leafletmap.html</file>
+        <file>plane.png</file>
+    </qresource>
+</RCC>
