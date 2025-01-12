@@ -1,0 +1,99 @@
+<!--
+ * @Date: 2024-07-24 21:01:10
+ * @LastEditors: thomas-smith123 thomas-smith@live.cn
+ * @LastEditTime: 2024-08-06 11:21:52
+ * @FilePath: \adsb\leafletmap.html
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map</title>
+    <meta charset="utf-8">
+    <style>
+        #map { height: 100%; width: 100%; }
+        html, body { height: 100%; margin: 0; padding: 0; }
+    </style>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=YOUR_API_KEY"></script>
+    <script src="http://api.tianditu.gov.cn/api?v=4.0&tk=您的密钥"></script>
+    <script>
+        var map;
+        var markers = {};
+        var infoWindow;
+        var MapLayers = [ ];
+        var zoom = 12;
+        function initTMap() {
+            map = new T.Map('map', {
+                projection: 'EPSG:4326'
+            });
+            map.centerAndZoom(new T.LngLat(116.40769, 39.89945), zoom);
+        }
+        
+        function initMap() {
+            MapLayers.push(new AMap.TileLayer.Satellite());
+            MapLayers.push(new AMap.TileLayer.RoadNet());
+            map = new AMap.Map('map', {
+                center: [116.397428, 39.90923],
+                zoom: 13,
+                mapStyle: 'amap://styles/light',
+                resizeEnable: true,
+                viewMode: '3D',
+                layers: MapLayers,
+            });
+            map.addLayer(new AMap.TileLayer.Satellite());
+            infoWindow = new AMap.InfoWindow({
+                offset: new AMap.Pixel(0, -30),
+                closeWhenClickMap: true
+            });
+
+            map.on('complete', function() {
+                // Map loaded successfully
+            });
+        }
+
+        function addCustomMarker(id, lng, lat, angle) {
+            var marker = new AMap.Marker({
+                position: new AMap.LngLat(lng, lat),
+                icon: new AMap.Icon({
+                    size: new AMap.Size(32, 32),
+                    image: "plane.png",
+                    imageSize: new AMap.Size(32, 32)
+                }),
+                angle: angle
+            });
+
+            marker.content = id;
+            marker.on('click', function(e) {
+                infoWindow.setContent(e.target.content);
+                infoWindow.open(map, e.target.getPosition());
+            });
+
+            markers[id] = marker;
+            map.add(marker);
+        }
+
+        function updateMarker(id, lng, lat, angle) {
+            var marker = markers[id];
+            if (marker) {
+                marker.setPosition(new AMap.LngLat(lng, lat));
+                marker.setAngle(angle);
+            }
+        }
+        function removeMarker(id) {
+            var marker = markers[id];
+            if (marker) {
+                map.remove(marker);
+                delete markers[id];
+            }
+        }
+        function clearMarkers() {
+            for (var id in markers) {
+                removeMarker(id);
+            }
+        }
+        window.onload = initMap;
+    </script>
+</head>
+<body>
+    <div id="map"></div>
+</body>
+</html>
