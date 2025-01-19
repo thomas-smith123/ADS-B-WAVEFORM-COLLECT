@@ -40,12 +40,12 @@ MainWindow::MainWindow(QWidget *parent)
         url->setText("ip:193.168.1.5");
         BW = new QLineEdit;
         BW->setFixedWidth(50);
-        BW->setText("4");
+        BW->setText("5");
         BW_label = new QLabel;
         BW_label->setText("BW(MHz):");
         fs = new QLineEdit;
         fs->setFixedWidth(50);
-        fs->setText("8");
+        fs->setText("10");
         // fs->setDisabled(true);
 
         fs_label = new QLabel;
@@ -327,12 +327,15 @@ void MainWindow::onPushselect()
         ad9361->lo = fc_content.toFloat();
         ad9361->config(ad9361->bw,ad9361->fs,ad9361->lo);
         adsb_process = new adsb_decoder(sharedresource);
+        // adsb_process1 = new adsb_decoder(sharedresource,nullptr,'1');
         // adsb_process->fs = this->fs->text().toFloat()*1e6;
         read_thread = new QThread;
         process_thread = new QThread;
+        // process_thread1 = new QThread;
         plot_thread = new QThread;
         ad9361->moveToThread(read_thread);
         adsb_process->moveToThread(process_thread);
+        // adsb_process1->moveToThread(process_thread1);
         plot_ = new plot;
         plot_->moveToThread(plot_thread);
         occupied = plot_->occupied;
@@ -343,14 +346,18 @@ void MainWindow::onPushselect()
         // connect(adsb_process,&adsb_decoder::process_done,this,&MainWindow::table_update);
         connect(updateTimer, &QTimer::timeout, this, &MainWindow::removeExpiredAircraft);
         // connect(updateTimer, &QTimer::timeout, adsb_process, &adsb_decoder::removeExpiredmap);
-        updateTimer->start(180*1000); // 每 10 秒检查一次
+        updateTimer->start(300*1000); // 每 10 秒检查一次
         //采集完成后进行处理
         // connect(adsb_process,&adsb_decoder::process_whole_done,ad9361,&board_read::reset_to_emmit,Qt::BlockingQueuedConnection);
         connect(ad9361,&board_read::read_onece_done,adsb_process,&adsb_decoder::do_process);//FIXME
+        // connect(ad9361,&board_read::read_onece_done,adsb_process1,&adsb_decoder::do_process);//FIXME BUG
         connect(ad9361,&board_read::read_onece_done,plot_,&plot::dataUpdate);//FIXME
+
         connect(adsb_process,&adsb_decoder::planeUpdate, this,&MainWindow::table_update);
+        // connect(adsb_process1,&adsb_decoder::planeUpdate, this,&MainWindow::table_update);
         connect(plot_,&plot::seriesPrepered,this,&MainWindow::plotChart);
         connect(adsb_process,&adsb_decoder::planeUpdate,this,&MainWindow::writeFramelog);
+        // connect(adsb_process1,&adsb_decoder::planeUpdate,this,&MainWindow::writeFramelog);
         // connect(adsb_process,&adsb_decoder::writelog,this,&MainWindow::writeFramelog);
         // connect(process_thread,&QThread::finished, adsb_process, &QObject::deleteLater);
         // 开启线程
@@ -358,6 +365,7 @@ void MainWindow::onPushselect()
         {
             plot_thread->start();
             process_thread->start();
+            // process_thread1->start();
             read_thread->start();
             ad9361->stop_ = false;
             emit ad9361_read_start();
@@ -379,15 +387,18 @@ void MainWindow::onPushselect()
             ad9361->stop_ = true;
             read_thread->quit();
             process_thread->quit();
+            // process_thread1->quit();
 
             read_thread->wait();
             // read_thread->exit();
 
             process_thread->wait();
+            // process_thread1->wait();
             // process_thread->exit();
 
             ad9361->deleteLater();
             process_thread->deleteLater();
+            // process_thread1->deleteLater();
         }
         select->setText(("Connect"));
         // url->setEnabled(true);
@@ -396,6 +407,7 @@ void MainWindow::onPushselect()
         // BW->setEnabled(true);
         // delete(ad9361);
         delete(adsb_process);
+        // delete(adsb_process1);
         delete(updateTimer);
         delete(sharedresource);
     }
@@ -635,6 +647,7 @@ void MainWindow::removeExpiredAircraft(void)
             // 检查转换是否成功，并且比较时间差
             if (itemTime.isValid() && itemTime.secsTo(currentTime) > 120) { // 300秒 = 5分钟
                 adsb_process->buff.remove((icao->text()).toStdString());
+                // adsb_process1->buff.remove((icao->text()).toStdString());
                 for (int col = 0; col < table->columnCount(); ++col) {
                     QTableWidgetItem* item = table->takeItem(row, col); // 获取并移除单元格中的item
                     delete item; // 释放item的内存

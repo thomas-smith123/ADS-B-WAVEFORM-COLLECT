@@ -10,8 +10,10 @@ board_read::board_read(sharedsource* sharedresource,QObject *parent)
     sharedresources = sharedresource;
     // emit_signal_to_process = true;
     config_flag = 1;
-    I = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
-    Q = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
+    I0 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
+    Q0 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
+    // I1 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
+    // Q1 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
 }
 void board_read::config(float bw=5,float fs=10,float lo=1092)
 {
@@ -53,7 +55,7 @@ void board_read::config(float bw=5,float fs=10,float lo=1092)
     if(this->config_flag)
     {
         IIO_ENSURE(cfg_ad9361_streaming_ch(ctx, &rxcfg, RX, 0) && "RX port 0 not found","RX port 0 not found");
-        IIO_ENSURE(cfg_ad9361_streaming_ch(ctx, &rxcfg, RX, 1) && "RX port 1 not found","RX port 1 not found");
+        // IIO_ENSURE(cfg_ad9361_streaming_ch(ctx, &rxcfg, RX, 1) && "RX port 1 not found","RX port 1 not found");
         //IIO_ENSURE(cfg_ad9361_streaming_ch(ctx, &txcfg, TX, 0) && "TX port 0 not found");
 
         // printf("* Initializing AD9361 IIO streaming channels\n");
@@ -62,8 +64,8 @@ void board_read::config(float bw=5,float fs=10,float lo=1092)
     {
         IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 0, &rx0_i) && "RX chan i not found","RX chan i not found");
         IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 1, &rx0_q) && "RX chan q not found","RX chan q not found");
-        IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 2, &rx1_i) && "RX chan i not found","RX chan i not found");
-        IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 3, &rx1_q) && "RX chan q not found","RX chan q not found");
+        // IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 2, &rx1_i) && "RX chan i not found","RX chan i not found");
+        // IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 3, &rx1_q) && "RX chan q not found","RX chan q not found");
         //IIO_ENSURE(get_ad9361_stream_ch(ctx, TX, tx, 0, &tx0_i) && "TX chan i not found");
         //IIO_ENSURE(get_ad9361_stream_ch(ctx, TX, tx, 1, &tx0_q) && "TX chan q not found");
 
@@ -71,13 +73,13 @@ void board_read::config(float bw=5,float fs=10,float lo=1092)
 
         iio_channel_enable(rx0_i);
         iio_channel_enable(rx0_q);
-        iio_channel_enable(rx1_i);
-        iio_channel_enable(rx1_q);
+        // iio_channel_enable(rx1_i);
+        // iio_channel_enable(rx1_q);
         //iio_channel_enable(tx0_i);
         //iio_channel_enable(tx0_q);
 
         // printf("* Creating non-cyclic IIO buffers with 1 MiS\n");
-        rxbuf = iio_device_create_buffer(rx, 1024 * 1024 * 2, false);
+        rxbuf = iio_device_create_buffer(rx, 1024 * 1024, false);
 
     }
     if(this->config_flag)
@@ -119,12 +121,14 @@ void board_read::start_read()
                 // p_end = (char*)iio_sbuffer_end(rxbuf);
                 for (p_dat = (char*)iio_buffer_first(rxbuf, rx0_i); p_dat < p_end; p_dat += p_inc) {
                     // Example: swap I and Q
-                    I[cnt] = ((int16_t*)p_dat)[0];// Real (I)
-                    Q[cnt] = ((int16_t*)p_dat)[1];// Imag (Q)
+                    I0[cnt] = ((int16_t*)p_dat)[0];// Real (I)
+                    Q0[cnt] = ((int16_t*)p_dat)[1];// Imag (Q)
+                    // I1[cnt] = ((int16_t*)p_dat)[2];// Real (I)
+                    // Q1[cnt] = ((int16_t*)p_dat)[3];// Imag (Q)
                     cnt++;
                 }
                 sharedresources->emit_signal_to_process = false;
-                emit read_onece_done(I,Q,1024*1024,rxcfg.fs_hz);
+                emit read_onece_done(I0,Q0,1024*1024,rxcfg.fs_hz);
             }
         }
     }
@@ -136,7 +140,7 @@ void board_read::reset_to_emmit()
 }
 board_read::~board_read()
 {
-    free(I); free(Q);
+    free(I0); free(Q0);
     shutdownDevice();
 }
 void board_read::shutdownDevice()

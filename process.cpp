@@ -64,7 +64,7 @@ int adsb_decoder::bin2int(const std::string& binstr) {
     return std::bitset<8>(binstr).to_ulong();
 }
 
-// CRC生成和校验函数
+// CRC生成和校验函数  BUG!!!!
 unsigned int adsb_decoder::crc(const std::string& msg, bool encode = false, bool output_result = false) {
     /*输入为'1'和'0'数组*/
     // CRC生成多项式
@@ -102,7 +102,7 @@ unsigned int adsb_decoder::crc(const std::string& msg, bool encode = false, bool
                           (mbytes[mbytes.size() - 2] << 8) |
                           mbytes[mbytes.size() - 1];
     if(!output_result)
-        return (result != 0);
+        return (result != 0); //result != 0 为真（返回值为 1），表示 CRC 检测到错误。
     else
         return result;
 }
@@ -974,7 +974,7 @@ double calculateSignalPower(const int16_t* I, const int16_t* Q, size_t n) {
 void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long fs)
 {
     // this->struct_init();
-    int16_t *abs_ = new int16_t[length];//maybe
+    float *abs_ = new float[length];//maybe
     for (int i = 0; i < length; i++)
     {
         abs_[i] = sqrt(I[i]*I[i] + Q[i]*Q[i]);
@@ -982,7 +982,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
     }
     int point=fs/1e6/2;
     int total_points = fs * 130e-6;//多给1us
-    int mean[240];
+    float mean[240];
     int mean_[112];
     float power;
     //     //slide windows
@@ -1000,8 +1000,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
             }
             mean[i_] = mean[i_] / point;
         }
-        if (*std::max_element(std::begin(mean), std::end(mean))<200)
-            continue;
+        if (*std::max_element(mean, mean + 240) < 200) continue;
         if(!(mean[0] > mean[1] && mean[0] > mean[3] && \
             mean[0] > mean[4] && mean[0] > mean[5] && \
               mean[0] > mean[6] && mean[0] > mean[8] && \
@@ -1025,11 +1024,10 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
               mean[9] > mean[6] && mean[9] > mean[8] && \
               mean[9] > mean[10] && mean[9] > mean[11] && \
                mean[9] > mean[12] && mean[9] > mean[13] && \
-               mean[9] > mean[14] && mean[9] > mean[15] &&
-              mean[0]>900 ))
+               mean[9] > mean[14] && mean[9] > mean[15]))
             continue;
 
-        int high = (mean[0]+mean[2]+mean[7]+mean[9])/6;
+        float high = (mean[0]+mean[2]+mean[7]+mean[9])/6;
         if (mean[4] >= high ||
             mean[5] >= high)
         {
@@ -1078,11 +1076,12 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
 
             }
         }
-        power = calculateSignalPower(I+i,Q+i,(len+8)*point*2);
-        if (power<0.02)
-            continue;
 
-        if (!crc(str,false))
+        power = calculateSignalPower(I+i,Q+i,(len+8)*point*2);
+        if (power<0.01)
+            continue;
+        unsigned int tmp = crc(str,false);
+        if (crc(str,false))
             continue;
 
         tmp_icao = adsb_icao(str);

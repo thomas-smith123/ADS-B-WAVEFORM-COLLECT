@@ -69,8 +69,10 @@ public:
     struct stream_cfg txcfg;
     size_t nrx = 0;
     size_t ntx = 0;
-    int16_t *I;
-    int16_t *Q;
+    int16_t *I0;
+    int16_t *Q0;
+    int16_t *I1;
+    int16_t *Q1;
     void config(float bw,float fs,float lo);
     explicit board_read(sharedsource* sharedresource, QObject *parent = nullptr);
     ~board_read();
