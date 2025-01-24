@@ -475,6 +475,7 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
     //mode s: df 4, 5, 20, 21
     //others: df 0, 16
     //adsb commb 前提是crc通过
+    std::string msgbin = hex2bin(msg);
 
     int DF = adsb_decoder::df(msg);
     frame.df = DF;
@@ -974,10 +975,11 @@ double calculateSignalPower(const int16_t* I, const int16_t* Q, size_t n) {
 void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long fs)
 {
     // this->struct_init();
-    float *abs_ = new float[length];//maybe
+    int max_flag=0;
+    float *abs_ = new float[length];//放到构造函数里面
     for (int i = 0; i < length; i++)
     {
-        abs_[i] = sqrt(I[i]*I[i] + Q[i]*Q[i]);
+        abs_[i] = (I[i]*I[i] + Q[i]*Q[i]);
         // qDebug()<< abs_[i] ;
     }
     int point=fs/1e6/2;
@@ -985,6 +987,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
     float mean[240];
     int mean_[112];
     float power;
+
     //     //slide windows
     QMutexLocker locker(&sharedresources->mutex);
     sharedresources->isProcessing = true;
@@ -999,8 +1002,10 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
                 mean[i_] += abs_[i + i_ * point + j];
             }
             mean[i_] = mean[i_] / point;
+            if (mean[i_]>40000){max_flag=1;continue;}
+
         }
-        if (*std::max_element(mean, mean + 240) < 200) continue;
+        if (max_flag) {max_flag=0;continue;}
         if(!(mean[0] > mean[1] && mean[0] > mean[3] && \
             mean[0] > mean[4] && mean[0] > mean[5] && \
               mean[0] > mean[6] && mean[0] > mean[8] && \
@@ -1019,7 +1024,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
               mean[7] > mean[10] && mean[7] > mean[11] && \
                mean[7] > mean[12] && mean[7] > mean[13] && \
                mean[7] > mean[14] && mean[7] > mean[15] && \
-               mean[9] > mean[1] && mean[9] > mean[3] && \
+               mean[9] > mean[1] && mean[9] > mean[4] && \
               mean[9] > mean[4] && mean[9] > mean[5] && \
               mean[9] > mean[6] && mean[9] > mean[8] && \
               mean[9] > mean[10] && mean[9] > mean[11] && \
@@ -1027,7 +1032,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
                mean[9] > mean[14] && mean[9] > mean[15]))
             continue;
 
-        float high = (mean[0]+mean[2]+mean[7]+mean[9])/6;
+        float high = (mean[0]+mean[2]+mean[7]+mean[9])/36;
         if (mean[4] >= high ||
             mean[5] >= high)
         {
