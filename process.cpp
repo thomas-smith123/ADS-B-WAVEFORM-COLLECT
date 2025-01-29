@@ -484,6 +484,7 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
     //mode s: df 4, 5, 20, 21
     //others: df 0, 16
     //adsb commb 前提是crc通过
+    std::string msgbin = hex2bin(msg);
 
     int DF = adsb_decoder::df(msg);
     frame.df = DF;
@@ -995,6 +996,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
     int mean_[112];
     int max_flag=0;
     float power;
+
     //     //slide windows
     QMutexLocker locker(&sharedresources->mutex);
     sharedresources->isProcessing = true;
@@ -1032,7 +1034,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
                mean[9] > mean[14] && mean[9] > mean[15]))
             continue;
 
-        float high = (mean[0]+mean[2]+mean[7]+mean[9])/6;
+        float high = (mean[0]+mean[2]+mean[7]+mean[9])/36;
         if (mean[4] >= high ||
             mean[5] >= high)
         {
