@@ -44,6 +44,7 @@ class board_read : public QObject
 public:
     bool emit_signal_to_process;
     QMutex *iq_lock;
+    double buffer_size;
     char start_flag;
     char config_flag; //0 fail, 1 success
     char *ip;
@@ -74,7 +75,7 @@ public:
     int16_t *I1;
     int16_t *Q1;
     void config(float bw,float fs,float lo);
-    explicit board_read(sharedsource* sharedresource, QObject *parent = nullptr);
+    explicit board_read(sharedsource* sharedresource, QObject *parent = nullptr, double buffer_siz=1024*1024);
     ~board_read();
     ptrdiff_t p_inc;
     char *p_dat, *p_end;

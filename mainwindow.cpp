@@ -326,6 +326,9 @@ void MainWindow::onPushselect()
         ad9361->fs = fs_content.toFloat();
         ad9361->lo = fc_content.toFloat();
         ad9361->config(ad9361->bw,ad9361->fs,ad9361->lo);
+        QString currentDateTime = QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+        QString fileName = currentDateTime + ".csv";
+        filewriter = new filewriter_(fileName);
         adsb_process = new adsb_decoder(sharedresource);
         // adsb_process1 = new adsb_decoder(sharedresource,nullptr,'1');
         // adsb_process->fs = this->fs->text().toFloat()*1e6;
@@ -333,6 +336,9 @@ void MainWindow::onPushselect()
         process_thread = new QThread;
         // process_thread1 = new QThread;
         plot_thread = new QThread;
+
+        filewriter_thread = new QThread;
+        filewriter->moveToThread(filewriter_thread);
         ad9361->moveToThread(read_thread);
         adsb_process->moveToThread(process_thread);
         // adsb_process1->moveToThread(process_thread1);
@@ -357,6 +363,8 @@ void MainWindow::onPushselect()
         // connect(adsb_process1,&adsb_decoder::planeUpdate, this,&MainWindow::table_update);
         connect(plot_,&plot::seriesPrepered,this,&MainWindow::plotChart);
         connect(adsb_process,&adsb_decoder::planeUpdate,this,&MainWindow::writeFramelog);
+        connect(adsb_process, &adsb_decoder::writefile,filewriter,&filewriter_::writeBuffer);
+        // connect(filewriter, &QThread::finished, filewriter, &QObject::deleteLater);
         // connect(adsb_process1,&adsb_decoder::planeUpdate,this,&MainWindow::writeFramelog);
         // connect(adsb_process,&adsb_decoder::writelog,this,&MainWindow::writeFramelog);
         // connect(process_thread,&QThread::finished, adsb_process, &QObject::deleteLater);
@@ -364,9 +372,11 @@ void MainWindow::onPushselect()
         // if (ad9361->config_flag)
         {
             plot_thread->start();
+            filewriter_thread->start();
             process_thread->start();
             // process_thread1->start();
             read_thread->start();
+
             ad9361->stop_ = false;
             emit ad9361_read_start();
             ad9361_started_flag = true;
@@ -388,16 +398,19 @@ void MainWindow::onPushselect()
             read_thread->quit();
             process_thread->quit();
             // process_thread1->quit();
+            filewriter_thread->quit();
 
             read_thread->wait();
             // read_thread->exit();
 
             process_thread->wait();
+            filewriter_thread->wait();
             // process_thread1->wait();
             // process_thread->exit();
 
             ad9361->deleteLater();
             process_thread->deleteLater();
+            filewriter_thread->deleteLater();
             // process_thread1->deleteLater();
         }
         select->setText(("Connect"));
@@ -407,6 +420,7 @@ void MainWindow::onPushselect()
         // BW->setEnabled(true);
         // delete(ad9361);
         delete(adsb_process);
+
         // delete(adsb_process1);
         delete(updateTimer);
         delete(sharedresource);

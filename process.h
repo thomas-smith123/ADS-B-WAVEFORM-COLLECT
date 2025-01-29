@@ -14,6 +14,7 @@
 #include <fstream>
 #include"QDateTime"
 #include <QFile>
+#include "QDebug"
 
 #define pi 3.1415926
 #define NZ 15
@@ -29,6 +30,8 @@ public:
     std::string fileName;
     QFile *file;
     QTextStream *out;
+    QString buffer;
+    int bufferLineCount;
     adsb_decoder(sharedsource *sharedresource,QObject *parent = nullptr);
     ~adsb_decoder();
     unsigned int crc(const std::string& msg, bool encode, bool output_result);
@@ -90,6 +93,7 @@ public slots:
     void do_process(int16_t *I, int16_t *Q, long int length, long long fs);
 signals:
     void writelog(std::string);
+    void writefile(QString buffer);
     void planeUpdate(struct ADSBFrame a);
 };
 std::string hex2bin(const std::string& hexstr);

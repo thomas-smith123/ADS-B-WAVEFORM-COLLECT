@@ -9,21 +9,30 @@ adsb_decoder::adsb_decoder(sharedsource *sharedresource,QObject *parent)
 {
     sharedresources = sharedresource;
     cnt = 0;
+    // adsb_decoder::bufferSize = 100000;
     frame = new ADSBFrame;
     last_frame = new ADSBFrame;
-    QString currentDateTime = QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
-    QString fileName = currentDateTime + ".csv";
-    qDebug()<<fileName;
-    file = new QFile (fileName);
+    adsb_decoder::bufferLineCount = 0;
+    // QString currentDateTime = QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
+    // QString fileName = currentDateTime + ".csv";
+    // qDebug()<<fileName;
+    // file = new QFile (fileName);
     // 以写模式打开文件
-    if (!file->open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qDebug() << "无法打开文件";
-    }
-    out = new QTextStream (file);
+    // if (!file->open(QIODevice::WriteOnly | QIODevice::Text)) {
+    //     qDebug() << "无法打开文件";
+    // }
+    // out = new QTextStream (file);
 }
 adsb_decoder::~adsb_decoder() {
-    file->close();
-    delete out;
+    qDebug()<<"adsb_decoder delete";
+    if (adsb_decoder::bufferLineCount>=0)
+    {//可以写了
+        emit writefile(adsb_decoder::buffer);
+        // buffer.clear();
+        adsb_decoder::bufferLineCount=0;
+    }
+    // file->close();
+    // delete out;
 }
 std::string hex2bin(const std::string& hexstr) {
     std::string binstr;
@@ -974,16 +983,17 @@ double calculateSignalPower(const int16_t* I, const int16_t* Q, size_t n) {
 void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long fs)
 {
     // this->struct_init();
-    float *abs_ = new float[length];//maybe
+    double *abs_ = new double[length];//maybe
     for (int i = 0; i < length; i++)
     {
-        abs_[i] = sqrt(I[i]*I[i] + Q[i]*Q[i]);
+        abs_[i] = (I[i]*I[i] + Q[i]*Q[i]);
         // qDebug()<< abs_[i] ;
     }
     int point=fs/1e6/2;
     int total_points = fs * 130e-6;//多给1us
-    float mean[240];
+    double mean[240];
     int mean_[112];
+    int max_flag=0;
     float power;
     //     //slide windows
     QMutexLocker locker(&sharedresources->mutex);
@@ -999,29 +1009,24 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
                 mean[i_] += abs_[i + i_ * point + j];
             }
             mean[i_] = mean[i_] / point;
+            if (mean[i_]>16000000){max_flag=1;continue;}
         }
-        if (*std::max_element(mean, mean + 240) < 200) continue;
+        // if (*std::max_element(mean, mean + 240) < 200) continue;
+        if (max_flag) {max_flag=0;continue;}
         if(!(mean[0] > mean[1] && mean[0] > mean[3] && \
             mean[0] > mean[4] && mean[0] > mean[5] && \
-              mean[0] > mean[6] && mean[0] > mean[8] && \
-              mean[0] > mean[10] && mean[0] > mean[11] && \
-               mean[0] > mean[12] && mean[0] > mean[13] && \
-               mean[0] > mean[14] && mean[0] > mean[15] && \
+
                mean[2] > mean[1] && mean[2] > mean[3] && \
               mean[2] > mean[4] && mean[2] > mean[5] && \
               mean[2] > mean[6] && mean[2] > mean[8] && \
-              mean[2] > mean[10] && mean[2] > mean[11] && \
-               mean[2] > mean[12] && mean[2] > mean[13] && \
-               mean[2] > mean[14] && mean[2] > mean[15] && \
-               mean[7] > mean[1] && mean[7] > mean[3] && \
-              mean[7] > mean[4] && mean[7] > mean[5] && \
+
+
               mean[7] > mean[6] && mean[7] > mean[8] && \
               mean[7] > mean[10] && mean[7] > mean[11] && \
                mean[7] > mean[12] && mean[7] > mean[13] && \
                mean[7] > mean[14] && mean[7] > mean[15] && \
-               mean[9] > mean[1] && mean[9] > mean[3] && \
-              mean[9] > mean[4] && mean[9] > mean[5] && \
-              mean[9] > mean[6] && mean[9] > mean[8] && \
+            \
+
               mean[9] > mean[10] && mean[9] > mean[11] && \
                mean[9] > mean[12] && mean[9] > mean[13] && \
                mean[9] > mean[14] && mean[9] > mean[15]))
@@ -1085,35 +1090,44 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
             continue;
 
         tmp_icao = adsb_icao(str);
-        *out<<QString::fromStdString(tmp_icao)<<","<<df<<","<<QString::number(len)<<",";
+
+        adsb_decoder::buffer += QString::fromStdString(tmp_icao) + "," + QString::number(df) + "," + QString::number(len) + ",";
+        adsb_decoder::buffer += QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz") + ",";
+
+        // *out<<QString::fromStdString(tmp_icao)<<","<<df<<","<<QString::number(len)<<",";
         // qDebug()<<QString::fromStdString(tmp_icao);
         int raw_len = fs/1000000*(len+8+10);
-        *out<<QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")<<",";
+        // *out<<QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")<<",";
         for(int p=0;p<raw_len;p++)
         {
             // *out<<QString::number(*(I+i+p))+QString("+j")+QString(*(Q+i+p))<<",";
             // *out<<QString::number(static_cast<int>(*(I+i+p)))<<"+j"<<QString::number(static_cast<int>(*(Q+i+p)))<<",";
-            *out<<static_cast<int>(*(I+i+p))<<"+j"<<static_cast<int>(*(Q+i+p))<<",";
+            adsb_decoder::buffer += QString::number(static_cast<int>(*(I + i + p))) + "+j" + QString::number(static_cast<int>(*(Q + i + p))) + ",";
+            // *out<<static_cast<int>(*(I+i+p))<<"+j"<<static_cast<int>(*(Q+i+p))<<",";
         }
         for(int p=0;p<(len+8)*2+10;p++)
         {
             // *out<<*(mean_+p)<<",";
-            *out<<static_cast<int>(*(mean+p))<<",";
+            adsb_decoder::buffer += QString::number(static_cast<int>(*(mean + p))) + ",";
+            // *out<<static_cast<int>(*(mean+p))<<",";
         }
-        *out<<"\n";
-        if (cnt>=5000)
-        {
-            cnt=0;
-            file->flush();
+        adsb_decoder::buffer += "\n";
+        adsb_decoder::bufferLineCount++;
+        // *out<<"\n";
+        if (adsb_decoder::bufferLineCount>=100)
+        {//可以写了
+            emit writefile(adsb_decoder::buffer);
+            buffer.clear();
+            adsb_decoder::bufferLineCount=0;
         }
+        // if (!buffer.isEmpty()) {
+        //     *out << buffer;
+        // }
 
         i+=len-1;
-        cnt ++;
+        // cnt ++;
 
         // emit writelog(str);
-
-
-
 
         frame->ICAO = tmp_icao;
         qDebug()<<tmp_icao;

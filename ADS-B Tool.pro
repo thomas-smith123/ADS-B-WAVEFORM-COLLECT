@@ -10,17 +10,21 @@ CONFIG += c++17
 
 SOURCES += \
     board_read.cpp \
+    filewriter.cpp \
     main.cpp \
     mainwindow.cpp \
     plot.cpp \
     process.cpp \
+    sharedmemorymanager.cpp \
     sharedsource.cpp
 
 HEADERS += \
     board_read.h \
+    filewriter.h \
     mainwindow.h \
     plot.h \
     process.h \
+    sharedmemorymanager.h \
     sharedsource.h
 
 # Default rules for deployment.

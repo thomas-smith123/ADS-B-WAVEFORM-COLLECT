@@ -21,6 +21,7 @@
 #include "plot.h"
 #include "process.h"
 #include "QCheckBox"
+#include "filewriter.h"
 
 class MainWindow : public QMainWindow
 {
@@ -63,8 +64,9 @@ public:
 
     board_read *ad9361;
     adsb_decoder *adsb_process;
-    QThread *read_thread, *process_thread, *plot_thread;
+    QThread *read_thread, *process_thread, *plot_thread, *filewriter_thread;
     sharedsource *sharedresource;
+    filewriter_ *filewriter;
 signals:
     void ad9361_read_start();
     void file_selected(QString FilePath);

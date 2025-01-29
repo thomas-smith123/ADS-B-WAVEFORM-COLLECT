@@ -4,18 +4,19 @@
 #include "random"
 #endif
 
-board_read::board_read(sharedsource* sharedresource,QObject *parent)
+board_read::board_read(sharedsource* sharedresource,QObject *parent, double buffer_size)
     : QObject{parent}
 {
     sharedresources = sharedresource;
+    board_read::buffer_size = buffer_size;
     // emit_signal_to_process = true;
     config_flag = 1;
-    I0 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
-    Q0 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
+    I0 = (int16_t*)malloc(sizeof(int16_t) * buffer_size);
+    Q0 = (int16_t*)malloc(sizeof(int16_t) * buffer_size);
     // I1 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
     // Q1 = (int16_t*)malloc(sizeof(int16_t) * 1024 * 1024);
 }
-void board_read::config(float bw=5,float fs=10,float lo=1092)
+void board_read::config(float bw=5,float fs=10,float lo=1091)
 {
     iq_lock = new QMutex;
     stop_ = true;
@@ -79,7 +80,7 @@ void board_read::config(float bw=5,float fs=10,float lo=1092)
         //iio_channel_enable(tx0_q);
 
         // printf("* Creating non-cyclic IIO buffers with 1 MiS\n");
-        rxbuf = iio_device_create_buffer(rx, 1024 * 1024, false);
+        rxbuf = iio_device_create_buffer(rx, board_read::buffer_size, false);
 
     }
     if(this->config_flag)
@@ -128,7 +129,7 @@ void board_read::start_read()
                     cnt++;
                 }
                 sharedresources->emit_signal_to_process = false;
-                emit read_onece_done(I0,Q0,1024*1024,rxcfg.fs_hz);
+                emit read_onece_done(I0,Q0,board_read::buffer_size,rxcfg.fs_hz);
             }
         }
     }
