@@ -1,0 +1,47 @@
+-IC:/Qt/6.7.2/msvc2019_64/mkspecs/win32-msvc
+-IC:/jiangrd3/ADS-B-WAVEFORM-COLLECT
+-IC:/jiangrd3/ADS-B-WAVEFORM-COLLECT
+-IC:/Qt/6.7.2/msvc2019_64/include
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQuickWidgets
+-IC:/Qt/6.7.2/msvc2019_64/include/QtLocation
+-IC:/Qt/6.7.2/msvc2019_64/include/QtPositioningQuick
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQuickShapes
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQuickShapes/6.7.2
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQuickShapes/6.7.2/QtQuickShapes
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQuick/6.7.2
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQuick/6.7.2/QtQuick
+-IC:/Qt/6.7.2/msvc2019_64/include/QtWebEngineWidgets
+-IC:/Qt/6.7.2/msvc2019_64/include/QtWebEngineCore
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQuick
+-IC:/Qt/6.7.2/msvc2019_64/include/QtCharts
+-IC:/Qt/6.7.2/msvc2019_64/include/QtOpenGLWidgets
+-IC:/Qt/6.7.2/msvc2019_64/include/QtOpenGL
+-IC:/Qt/6.7.2/msvc2019_64/include/QtPrintSupport
+-IC:/Qt/6.7.2/msvc2019_64/include/QtWidgets
+-IC:/Qt/6.7.2/msvc2019_64/include/QtGui/6.7.2
+-IC:/Qt/6.7.2/msvc2019_64/include/QtGui/6.7.2/QtGui
+-IC:/Qt/6.7.2/msvc2019_64/include/QtGui
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQmlModels/6.7.2
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQmlModels/6.7.2/QtQmlModels
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQmlModels
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQml/6.7.2
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQml/6.7.2/QtQml
+-IC:/Qt/6.7.2/msvc2019_64/include/QtWebChannel
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQml
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQmlIntegration
+-IC:/Qt/6.7.2/msvc2019_64/include/QtNetwork
+-IC:/Qt/6.7.2/msvc2019_64/include/QtPositioning
+-IC:/Qt/6.7.2/msvc2019_64/include/QtCore/6.7.2
+-IC:/Qt/6.7.2/msvc2019_64/include/QtCore/6.7.2/QtCore
+-IC:/Qt/6.7.2/msvc2019_64/include/QtCore
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQmlBuiltins/6.7.2
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQmlBuiltins/6.7.2/QtQmlBuiltins
+-IC:/Qt/6.7.2/msvc2019_64/include/QtQmlBuiltins
+-IC:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\include
+-IC:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\ATLMFC\include
+-IC:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\VS\include
+-IC:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\ucrt
+-IC:\Program Files (x86)\Windows Kits\10\\include\10.0.22621.0\\um
+-IC:\Program Files (x86)\Windows Kits\10\\include\10.0.22621.0\\shared
+-IC:\Program Files (x86)\Windows Kits\10\\include\10.0.22621.0\\winrt
+-IC:\Program Files (x86)\Windows Kits\10\\include\10.0.22621.0\\cppwinrt
