@@ -19,10 +19,16 @@
 #include <QDateTime>
 #include "QSplineSeries"
 #include "plot.h"
-#include "process.h"
+#include "QSpinBox"
+#include "process_.h"
 #include "QCheckBox"
-#include "filewriter.h"
+#include <QQuickWidget>
+#include <QtWebEngineWidgets/QWebEngineView>
+// #include "filewriter.h"
+#include "processmanager.h"
+#include "predefine.h"
 
+class filewriter_;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -30,17 +36,17 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
-    QWidget *centralWidget,*PlotWidget, *TableWidget, *FrameLogWidget, *TXWidget;
+    QWidget *centralWidget, *MapWidget, *PlotWidget, *TableWidget, *FrameLogWidget, *TXWidget;
     //layout
-    QGridLayout *gridLayout, *PlotLayout, *TableLayout, *FrameLogLayout, *TXLayout;
+    QGridLayout *gridLayout, *MapLayout, *PlotLayout, *TableLayout, *FrameLogLayout, *TXLayout;
     QHBoxLayout *ConfigLayout, *StaticticLayout;
     QGroupBox *statistic;
     QTabWidget *tab;
     //widget
-    QLabel *url_label, *fs_label, *fc_label, *BW_label, *real_label, *imag_label, *moulde_label;
+    QLabel *url_label, *fs_label, *fc_label, *BW_label, *real_label, *imag_label, *moulde_label, *numthread_label;
     QLabel *FrameCount, *Count;
     QLineEdit *url, *fs, *fc, *BW;
+    QSpinBox *numthread;
     QPushButton *select, *clear;
     QTableWidget *table;
     QTextBrowser *log;
@@ -67,6 +73,9 @@ public:
     QThread *read_thread, *process_thread, *plot_thread, *filewriter_thread;
     sharedsource *sharedresource;
     filewriter_ *filewriter;
+    processManager *manager;
+
+    QTableWidgetItem *tmpItem;
 signals:
     void ad9361_read_start();
     void file_selected(QString FilePath);
@@ -78,6 +87,9 @@ public slots:
     void removeExpiredAircraft(void);
     void table_update(struct ADSBFrame a);
     void plotChart(QSplineSeries *a,QSplineSeries *b,QSplineSeries *c);
+    void addCustomMarker(const QString &id, double lng, double lat, double angle);
+    void updateMarker(const QString &id, double lng, double lat, double angle);
+    void removeMarker(const QString &id);
     void onPushdf0();
     void onPushdf4();
     void onPushdf5();
@@ -92,6 +104,7 @@ public slots:
 private:
     QTimer *updateTimer;
     QDateTime currentTime;
+    QWebEngineView *map;
 };
 enum adsb_header{
     ICAO=0,

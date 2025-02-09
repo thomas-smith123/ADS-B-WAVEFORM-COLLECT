@@ -9,6 +9,7 @@ board_read::board_read(sharedsource* sharedresource,QObject *parent, double buff
 {
     sharedresources = sharedresource;
     board_read::buffer_size = buffer_size;
+    start_flag = false;
     // emit_signal_to_process = true;
     config_flag = 1;
     I0 = (int16_t*)malloc(sizeof(int16_t) * buffer_size);
@@ -105,11 +106,12 @@ void board_read::start_read()
         // char *p_dat, *p_end;
         // ptrdiff_t p_inc;
 
-        while (!board_read::stop_)
+        while (!this->stop_)
         {
             QMutexLocker locker(&sharedresources->mutex);
             while (sharedresources->isProcessing) {
                 sharedresources->condition.wait(&sharedresources->mutex);
+                // if(this->stop_)break;
             }
             long int cnt = 0;
             if (sharedresources->emit_signal_to_process)
@@ -132,6 +134,7 @@ void board_read::start_read()
                 emit read_onece_done(I0,Q0,board_read::buffer_size,rxcfg.fs_hz);
             }
         }
+        qDebug()<<"exit reading";
     }
 
 }

@@ -3,7 +3,11 @@
 
 #endif // ADSB_DECODER_H
 #pragma once
+#include "predefine.h"
+#include "taskQueue.h"
 #include <QObject>
+#include "QThread"
+#include "QMutex"
 #include <iostream>
 #include <string>
 #include <bitset>
@@ -15,12 +19,19 @@
 #include"QDateTime"
 #include <QFile>
 #include "QDebug"
+#include "QQueue"
+// #include "processmanager.h"
 
 #define pi 3.1415926
 #define NZ 15
 #define MODES_SHORT_MSG_BITS 56
 #define MODES_LONG_MSG_BITS 112
-class adsb_decoder : public QObject
+
+int max(int a, int b);
+
+float speed_for_df17(int a);
+
+class adsb_decoder : public QThread
 {
     Q_OBJECT
 public:
@@ -32,12 +43,19 @@ public:
     QTextStream *out;
     QString buffer;
     int bufferLineCount;
-    adsb_decoder(sharedsource *sharedresource,QObject *parent = nullptr);
+    explicit adsb_decoder(TaskQueue *taskQueue, QObject *parent = nullptr):taskQueue(taskQueue){
+        // sharedresources = sharedresource;
+        cnt = 0;
+        // adsb_decoder::bufferSize = 100000;
+        frame = new ADSBFrame;
+        last_frame = new ADSBFrame;
+        adsb_decoder::bufferLineCount = 0;
+    }
     ~adsb_decoder();
     unsigned int crc(const std::string& msg, bool encode, bool output_result);
     static int df(const std::string& msg); //输入'1'和'0'数组
     static int ca(const std::string& msg); //输入'1'和'0'数组
-    std::string adsb_icao(const std::string& msg);
+    std::string adsb_icao(const std::string& msg,const std::string& msgbin);
     static int tc(const std::string& msg); //输入'1'和'0'数组
     static std::string callsign(const std::string& msg);
     static int ss(const std::string& msg); //输入'1'和'0'数组
@@ -69,7 +87,7 @@ public:
     int as(const std::string& msg); //Diff from baro alt
     int vs(const std::string& msg);
     static int modesMessageLenByType(int type);
-    int decode(const std::string& msg, struct ADSBFrame& frame);
+    int decode(const std::string& msg, const std::string& msg_bin, struct ADSBFrame& frame);
     // mode s
     int fs(const std::string& msg);//flight status
     int dr(const std::string& msg);//downlint request
@@ -78,6 +96,7 @@ public:
     std::string id(const std::string& msg);
 
     QMap<std::string, struct ADSBFrame> buff;
+
 private:
 
     std::vector<std::string> wrap(const std::string& str, size_t width);
@@ -87,98 +106,38 @@ private:
     int nlz(uint64_t x);//number of longitude zones
     int adsb_commb(int df);
 
+    TaskQueue *taskQueue;
+    QWaitCondition waitCondition;
     sharedsource* sharedresources;
+    std::atomic<bool> running{true};  // 线程安全的 bool 变量
+protected:
+    void run() override{
+        while (!QThread::currentThread()->isInterruptionRequested())
+        {
+            WindowTask task;
+            if(!taskQueue->waitForTask(10)){
+                continue;
+            }
+            // taskQueue->waitForTask();
+            if (!taskQueue->getTask(task))
+            {
+                continue;
+            }
+            //do process
+            this->do_process(task.I,task.Q,task.windowSize,task.fs);
+        }
+        qDebug() << "Thread exiting...";
+    }; //  this need to be decleared first, and then override it
 
-public slots:
+public:
     void do_process(int16_t *I, int16_t *Q, long int length, long long fs);
 signals:
     void writelog(std::string);
     void writefile(QString buffer);
     void planeUpdate(struct ADSBFrame a);
+    void taskComplete();
 };
 std::string hex2bin(const std::string& hexstr);
 std::string binaryArrayToHex(const uint16_t* binaryArray, int size);
 std::string binaryArrayToHex(const int* binaryArray, int size);
-struct ADSBFrame
-{
-    //flag
-    bool tc31flag = false; //true for version 1 or 2
-    int version=0;
-    //plane attribute
-    int category = 0;
-    std::string callsign;
-    uint64_t latcpr,loncpr;
-    uint64_t latcpr_even, loncpr_even;
-    uint64_t latcpr_odd, loncpr_odd;
-    float lat=999.0, lon=999.0, pre_lat, pre_lon;
-    float velocity,heading, vertical_rate;
-    uint32_t svr; //0 for down, 1 for descending
-    uint64_t movement;
-    int cprflag;
-    uint64_t oddtime,eventime;
-    double alt;
-    int ss,saf,tc,st;
 
-    int df; //Downlink Format
-    int ca; //Transponder capability
-    std::string ICAO;
-    int vs;//Vertical status: aircraft status, airborne (0) or on the ground (1)
-    uint8_t flight_status, downlink_request, utility_message;
-    bool unit; // 0 for ft, 1 for m
-    // control
-    int delthis; // 0 for new, 1 for keep, 2 for delete
-    QDateTime lastSeen;
-    std::string msg;
-};
-
-enum planeCategory_
-{
-    Surface_emergency_vehicle = 1,
-    Surface_service_vehicle,
-    Ground_obstruction,
-    Glider_sailplane,
-    Lighter_than_air,
-    Parachutist_skydiver,
-    Ultralight_handglider_paraglider,
-    uav,
-    Space_or_transatmospheric_vehicle,
-    light,
-    medium1,
-    medium2,
-    High_vortex_aircraft,
-    heavy,
-    High_performance_and_high_speed,
-    Rotorcraft,
-};
-enum surveillanceStatus
-{
-    No_condition=0,
-    Permanent_alert,
-    Temporary_alert,
-    spiCondition,
-};
-enum flightStatue {
-    no_alert_no_SPI_aircraft_airborne=0,
-    no_alert_no_SPI_aircraft_onground,
-    alert_no_SPI_aircraft_airborne,
-    alert_no_SPI_aircraft_onground,
-    alert_SPI_aircraft_airborne_or_ground,
-    no_alert_SPI_aircraft_airborne,
-    resreve,
-    not_assigned
-};
-enum downlinkRequest {
-    no_request = 0,
-    send_CommB_message,
-    CommB_broadcast_message1_available,
-    CommB_broadcast_message2_available,
-};
-enum utilityMessage {
-    no_information = 0,
-    IIS_contains_CommB_interrogator_identifier_code,
-    IIS_contains_CommC_interrogator_identifier_code,
-    IIS_contains_CommD_interrogator_identifier_code,
-};
-int max(int a, int b);
-
-float speed_for_df17(int a);

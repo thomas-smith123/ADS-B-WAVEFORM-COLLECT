@@ -27,7 +27,7 @@
             });
             map.centerAndZoom(new T.LngLat(116.40769, 39.89945), zoom);
         }
-        
+
         function initMap() {
             MapLayers.push(new AMap.TileLayer.Satellite());
             MapLayers.push(new AMap.TileLayer.RoadNet());
@@ -36,7 +36,7 @@
                 zoom: 13,
                 mapStyle: 'amap://styles/light',
                 resizeEnable: true,
-                viewMode: '3D',
+                viewMode: '2D',
                 layers: MapLayers,
             });
             map.addLayer(new AMap.TileLayer.Satellite());

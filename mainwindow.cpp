@@ -1,6 +1,9 @@
 #include "mainwindow.h"
 #include "QGeoPositionInfoSource"
-
+#include "filewriter.h"
+#include "QNetworkProxyFactory"
+#include <QWebEngineSettings>
+#include <QWebEngineProfile>
 double pre_lat,pre_lon;
 
 QMap<int,std::string> planeCategory={
@@ -37,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
         url_label = new QLabel;
         url_label->setText("url:");
         url = new QLineEdit;
-        url->setText("ip:193.168.1.5");
+        url->setText("ip:192.168.3.111");
         BW = new QLineEdit;
         BW->setFixedWidth(50);
         BW->setText("5");
@@ -55,6 +58,11 @@ MainWindow::MainWindow(QWidget *parent)
         fc->setText("1091");
         fc_label = new QLabel;
         fc_label->setText("fc(MHz):");
+        numthread = new QSpinBox;
+        numthread->setRange(2,15);
+        numthread->setValue(5);
+        numthread_label = new QLabel;
+        numthread_label->setText("NumThread:");
         url->setEnabled(false);
         fs->setEnabled(false);
         fc->setEnabled(false);
@@ -69,11 +77,30 @@ MainWindow::MainWindow(QWidget *parent)
         ConfigLayout->addWidget(fc,1);
         ConfigLayout->addWidget(BW_label,1);
         ConfigLayout->addWidget(BW,1);
+        ConfigLayout->addWidget(numthread_label,1);
+        ConfigLayout->addWidget(numthread,4);
         ConfigLayout->addWidget(select,1);
     }
 
     // tab
     {
+        {
+            QWebEngineProfile::defaultProfile()->setHttpCacheType(QWebEngineProfile::MemoryHttpCache);
+            QWebEngineProfile::defaultProfile()->setHttpCacheMaximumSize(0);
+            map = new QWebEngineView(this);
+            QWebEngineSettings *settings = map->settings();
+            settings->setAttribute(QWebEngineSettings::Accelerated2dCanvasEnabled, false);
+            settings->setAttribute(QWebEngineSettings::WebGLEnabled, false);//false后ram占用减小很多
+            // webView->setUrl(QUrl("qrc:/amap.html"));
+            map->setUrl(QUrl("qrc:/leafletmap.html"));
+            QNetworkProxyFactory::setUseSystemConfiguration(false);
+            MapWidget = new QWidget;
+            MapLayout = new QGridLayout;
+            MapLayout->addWidget(map);
+            MapWidget->setLayout(MapLayout);
+            tab->addTab(MapWidget,"Map");
+
+        }
         {//table
             TableWidget = new QWidget;
             TableLayout = new QGridLayout;
@@ -107,7 +134,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
 
-        tab->addTab(TableWidget,"Map");
+        tab->addTab(TableWidget,"LogTable");
 
         {
             PlotWidget = new QWidget;
@@ -325,58 +352,43 @@ void MainWindow::onPushselect()
         ad9361->bw = BW_content.toFloat();
         ad9361->fs = fs_content.toFloat();
         ad9361->lo = fc_content.toFloat();
+
         ad9361->config(ad9361->bw,ad9361->fs,ad9361->lo);
         QString currentDateTime = QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
         QString fileName = currentDateTime + ".csv";
         filewriter = new filewriter_(fileName);
-        adsb_process = new adsb_decoder(sharedresource);
-        // adsb_process1 = new adsb_decoder(sharedresource,nullptr,'1');
-        // adsb_process->fs = this->fs->text().toFloat()*1e6;
+
         read_thread = new QThread;
-        process_thread = new QThread;
-        // process_thread1 = new QThread;
+        // process_thread = new QThread;
         plot_thread = new QThread;
 
         filewriter_thread = new QThread;
         filewriter->moveToThread(filewriter_thread);
+        manager = new processManager(this,sharedresource,filewriter,numthread->value());//放filewriter可能有问题
         ad9361->moveToThread(read_thread);
-        adsb_process->moveToThread(process_thread);
-        // adsb_process1->moveToThread(process_thread1);
+
         plot_ = new plot;
         plot_->moveToThread(plot_thread);
         occupied = plot_->occupied;
         updateTimer = new QTimer(this);
 
         connect(this,SIGNAL(ad9361_read_start()),ad9361,SLOT(start_read()));
-        // connect(this,SIGNAL(ad9361_read_start()),ad9361,SLOT(start_read()));
         // connect(adsb_process,&adsb_decoder::process_done,this,&MainWindow::table_update);
         connect(updateTimer, &QTimer::timeout, this, &MainWindow::removeExpiredAircraft);
         // connect(updateTimer, &QTimer::timeout, adsb_process, &adsb_decoder::removeExpiredmap);
         updateTimer->start(300*1000); // 每 10 秒检查一次
         //采集完成后进行处理
-        // connect(adsb_process,&adsb_decoder::process_whole_done,ad9361,&board_read::reset_to_emmit,Qt::BlockingQueuedConnection);
-        connect(ad9361,&board_read::read_onece_done,adsb_process,&adsb_decoder::do_process);//FIXME
-        // connect(ad9361,&board_read::read_onece_done,adsb_process1,&adsb_decoder::do_process);//FIXME BUG
+        connect(ad9361,&board_read::read_onece_done,manager,&processManager::addNewTask);
         connect(ad9361,&board_read::read_onece_done,plot_,&plot::dataUpdate);//FIXME
-
-        connect(adsb_process,&adsb_decoder::planeUpdate, this,&MainWindow::table_update);
-        // connect(adsb_process1,&adsb_decoder::planeUpdate, this,&MainWindow::table_update);
         connect(plot_,&plot::seriesPrepered,this,&MainWindow::plotChart);
-        connect(adsb_process,&adsb_decoder::planeUpdate,this,&MainWindow::writeFramelog);
-        connect(adsb_process, &adsb_decoder::writefile,filewriter,&filewriter_::writeBuffer);
-        // connect(filewriter, &QThread::finished, filewriter, &QObject::deleteLater);
-        // connect(adsb_process1,&adsb_decoder::planeUpdate,this,&MainWindow::writeFramelog);
-        // connect(adsb_process,&adsb_decoder::writelog,this,&MainWindow::writeFramelog);
-        // connect(process_thread,&QThread::finished, adsb_process, &QObject::deleteLater);
+
         // 开启线程
-        // if (ad9361->config_flag)
+        if (ad9361->config_flag)
         {
             plot_thread->start();
             filewriter_thread->start();
-            process_thread->start();
-            // process_thread1->start();
+            manager->startprocessing();
             read_thread->start();
-
             ad9361->stop_ = false;
             emit ad9361_read_start();
             ad9361_started_flag = true;
@@ -386,42 +398,44 @@ void MainWindow::onPushselect()
             fs->setEnabled(false);
             fc->setEnabled(false);
             BW->setEnabled(false);
+            numthread->setEnabled(false);
+            // qDebug()<<"simulate output";
+            // QThread::msleep(10000);
+            // manager->stopprocessing();
         }
     }
     else
     {
         // if(ad9361->config_flag )
         {
+            ad9361->stop_ = true;
+
             ad9361->start_flag = 0;
             ad9361_started_flag = false;
-            ad9361->stop_ = true;
+
+            manager->stopprocessing();
             read_thread->quit();
-            process_thread->quit();
-            // process_thread1->quit();
             filewriter_thread->quit();
 
-            read_thread->wait();
-            // read_thread->exit();
 
-            process_thread->wait();
+            read_thread->wait();
             filewriter_thread->wait();
-            // process_thread1->wait();
-            // process_thread->exit();
 
             ad9361->deleteLater();
-            process_thread->deleteLater();
             filewriter_thread->deleteLater();
+
             // process_thread1->deleteLater();
         }
         select->setText(("Connect"));
-        // url->setEnabled(true);
-        // fs->setEnabled(true);
-        // fc->setEnabled(true);
-        // BW->setEnabled(true);
-        // delete(ad9361);
-        delete(adsb_process);
+        url->setEnabled(true);
+        fs->setEnabled(true);
+        fc->setEnabled(true);
+        BW->setEnabled(true);
+        numthread->setEnabled(true);
 
+        delete (filewriter);
         // delete(adsb_process1);
+        delete manager;
         delete(updateTimer);
         delete(sharedresource);
     }
@@ -526,14 +540,12 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
         {
             if(table->item(i,adsb_header::ICAO)->text().toStdString() == adsb_frame.ICAO)
             {
+                tmpItem = table->item(i,adsb_header::CNT);
                 float tmp = table->item(i,adsb_header::CNT)->text().toFloat();
 
-                // QTableWidgetItem* item_ =table->item(i,adsb_header::CNT);
-                // item_->setText(QString::number(tmp+1));
-                // table->setItem(i, adsb_header::CNT, item_);
-                table->setItem(i, adsb_header::CNT, new QTableWidgetItem(QString::number(tmp+1)));
-                // item_ =table->item(i,adsb_header::Message);
-                // item_->setText(QString::fromStdString(adsb_frame.msg));
+                // table->setItem(i, adsb_header::CNT, new QTableWidgetItem(QString::number(tmp+1)));
+                table->setItem(i, adsb_header::CNT, tmpItem);
+
                 table->setItem(i, adsb_header::Message, new QTableWidgetItem(QString::fromStdString( adsb_frame.msg)));
                 //update
                 int df = adsb_frame.df;
@@ -620,14 +632,6 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
         case 18:
             table->setItem(row, adsb_header::CA, new QTableWidgetItem(QString::fromStdString(planeCategory[adsb_frame.category])));
             break;
-        case 19:
-            break;
-        case 20:
-            break;
-        case 21:
-            break;
-        case 24:
-            break;
         default:
             break;
         }
@@ -660,7 +664,7 @@ void MainWindow::removeExpiredAircraft(void)
 
             // 检查转换是否成功，并且比较时间差
             if (itemTime.isValid() && itemTime.secsTo(currentTime) > 120) { // 300秒 = 5分钟
-                adsb_process->buff.remove((icao->text()).toStdString());
+                // adsb_process->buff.remove((icao->text()).toStdString());
                 // adsb_process1->buff.remove((icao->text()).toStdString());
                 for (int col = 0; col < table->columnCount(); ++col) {
                     QTableWidgetItem* item = table->takeItem(row, col); // 获取并移除单元格中的item
@@ -722,3 +726,22 @@ void MainWindow::onPushdf21(){
 void MainWindow::onPushdf24(){
     df24_value = df24->isChecked()?1:0;
 };
+void MainWindow::addCustomMarker(const QString &id, double lng, double lat, double angle) {
+    QString script = QString(
+                         "addCustomMarker('%1', %2, %3, %4);"
+                         ).arg(id).arg(lng).arg(lat).arg(angle);
+    map->page()->runJavaScript(script);
+}
+
+void MainWindow::updateMarker(const QString &id, double lng, double lat, double angle) {
+    QString script = QString(
+                         "updateMarker('%1', %2, %3, %4 );"
+                         ).arg(id).arg(lng).arg(lat).arg(angle);
+    map->page()->runJavaScript(script);
+}
+void MainWindow::removeMarker(const QString &id) {
+    QString script = QString(
+                         "removeMarker('%1');"
+                         ).arg(id);
+    map->page()->runJavaScript(script);
+}

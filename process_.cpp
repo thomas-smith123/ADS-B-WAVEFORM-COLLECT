@@ -1,28 +1,9 @@
-#include "process.h"
+#include "process_.h"
 #include <sstream>
-
+#include <QObject>
 extern double pre_lat,pre_lon;
 char ais_charset[] = "?ABCDEFGHIJKLMNOPQRSTUVWXYZ????? ???????????????0123456789??????";
 
-adsb_decoder::adsb_decoder(sharedsource *sharedresource,QObject *parent)
-    : QObject{parent}
-{
-    sharedresources = sharedresource;
-    cnt = 0;
-    // adsb_decoder::bufferSize = 100000;
-    frame = new ADSBFrame;
-    last_frame = new ADSBFrame;
-    adsb_decoder::bufferLineCount = 0;
-    // QString currentDateTime = QDateTime::currentDateTime().toString("yyyyMMdd_hhmm");
-    // QString fileName = currentDateTime + ".csv";
-    // qDebug()<<fileName;
-    // file = new QFile (fileName);
-    // 以写模式打开文件
-    // if (!file->open(QIODevice::WriteOnly | QIODevice::Text)) {
-    //     qDebug() << "无法打开文件";
-    // }
-    // out = new QTextStream (file);
-}
 adsb_decoder::~adsb_decoder() {
     qDebug()<<"adsb_decoder delete";
     if (adsb_decoder::bufferLineCount>=0)
@@ -125,8 +106,8 @@ unsigned int adsb_decoder::hex_to_int(const std::string& hex) {
     return std::stoul(hex, nullptr, 16);
 }
 
-std::string adsb_decoder::adsb_icao(const std::string& msg) {
-    int df_ = adsb_decoder::df(msg);
+std::string adsb_decoder::adsb_icao(const std::string& msg,const std::string& msgbin) {
+    int df_ = adsb_decoder::df(msgbin);
     if (df_==0||df_==16||df_==4||df_==5||df_==20||df_==21)
     {
         unsigned int c0 = adsb_decoder::crc(msg, true, true);
@@ -151,25 +132,25 @@ std::string adsb_decoder::adsb_icao(const std::string& msg) {
         else
             return "FFFFFF";
 }
-int adsb_decoder::df(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::df(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int df = std::bitset<5>(msgbin.substr(0, 5)).to_ulong();;
     return df;
 }
 
-int adsb_decoder::ca(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::ca(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int df = std::bitset<3>(msgbin.substr(5, 3)).to_ulong();;
     return df;
 }
-int adsb_decoder::tc(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::tc(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int tc = std::bitset<5>(msgbin.substr(32, 5)).to_ulong();;
     return tc;
 }
 
-std::string adsb_decoder::callsign(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+std::string adsb_decoder::callsign(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     //std::bitset<48> bit(msgbin.substr(40, 48));
     char hexString[8], cnt = 0;
     for (int i = 0; i < 48; i += 6)
@@ -183,20 +164,20 @@ std::string adsb_decoder::callsign(const std::string& msg) {
     return str.substr(0, 8);
 }
 
-int adsb_decoder::ss(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::ss(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int ss = std::bitset<5>(msgbin.substr(37, 2)).to_ulong();;
     return ss;
 }
 
-int adsb_decoder::saf(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::saf(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int saf = std::bitset<1>(msgbin.substr(39, 1)).to_ulong();;
     return saf;
 }
 
-double adsb_decoder::alt_Barometric(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+double adsb_decoder::alt_Barometric(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     std::bitset<12> tmp(msgbin.substr(40, 12));
     int n;
     if (tmp[7] == 1)
@@ -206,44 +187,44 @@ double adsb_decoder::alt_Barometric(const std::string& msg) {
     int32_t alt = std::bitset<11>(tmp.to_string().substr(0, 7) + tmp.to_string().substr(8, 4)).to_ulong()*n-1000;
     return alt*0.3048;
 }
-double adsb_decoder::alt_GNSS(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+double adsb_decoder::alt_GNSS(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int32_t alt = std::bitset<12>(msgbin.substr(40, 12)).to_ulong();;
     return alt*0.3048;
 }
 
-int adsb_decoder::cpr_flag(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::cpr_flag(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int flag = std::bitset<1>(msgbin.substr(53, 1)).to_ulong();;
     return flag;
 }
 
-uint64_t adsb_decoder::cpr_lat(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+uint64_t adsb_decoder::cpr_lat(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     uint64_t alt = std::bitset<17>(msgbin.substr(54, 17)).to_ulong();;
     return alt;
 }
 
-uint64_t adsb_decoder::cpr_lon(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+uint64_t adsb_decoder::cpr_lon(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     uint64_t alt = std::bitset<17>(msgbin.substr(71, 17)).to_ulong();;
     return alt;
 }
 
-uint64_t adsb_decoder::movement(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+uint64_t adsb_decoder::movement(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     uint64_t movement = std::bitset<37>(msgbin.substr(37, 7)).to_ulong();;
     return movement;
 }
 
-int adsb_decoder::ground_track(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::ground_track(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int gt = std::bitset<7>(msgbin.substr(45, 7)).to_ulong();;
     return gt;
 }
 
-int adsb_decoder::subtype(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::subtype(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int st = std::bitset<3>(msgbin.substr(37, 3)).to_ulong();;
     return st;
 }
@@ -260,26 +241,26 @@ int adsb_decoder::nac(const std::string& msg) {
     return nac;
 }
 
-int adsb_decoder::swe(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::swe(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int swe = std::bitset<1>(msgbin.substr(45, 1)).to_ulong();;
     return swe;
 }
 
-int adsb_decoder::vwe(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::vwe(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int vwe = std::bitset<10>(msgbin.substr(46, 10)).to_ulong();;
     return vwe;
 }
 
-int adsb_decoder::sns(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::sns(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int swe = std::bitset<1>(msgbin.substr(56, 1)).to_ulong();;
     return swe;
 }
 
-int adsb_decoder::vns(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::vns(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int vwe = std::bitset<10>(msgbin.substr(57, 10)).to_ulong();;
     return vwe;
 }
@@ -290,14 +271,14 @@ int adsb_decoder::vrsc(const std::string& msg) {
     return vrsc;
 }
 
-int adsb_decoder::svr(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::svr(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int svr = std::bitset<1>(msgbin.substr(68, 1)).to_ulong();;
     return svr;
 }
 
-int adsb_decoder::vr(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::vr(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int vr = std::bitset<9>(msgbin.substr(69, 9)).to_ulong();;
     return vr;
 }
@@ -314,14 +295,14 @@ int adsb_decoder::dif(const std::string& msg) {
     return vr;
 }
 
-int adsb_decoder::hs(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::hs(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int hs = std::bitset<1>(msgbin.substr(45, 1)).to_ulong();;
     return hs;
 }
 
-int adsb_decoder::hdg(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::hdg(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int hdg = std::bitset<10>(msgbin.substr(46, 10)).to_ulong();;
     return hdg;
 }
@@ -332,26 +313,26 @@ int adsb_decoder::ast(const std::string& msg) {
     return ast;
 }
 
-int adsb_decoder::as(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::as(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int as = std::bitset<10>(msgbin.substr(57, 10)).to_ulong();;
     return as;
 }
 
-int adsb_decoder::fs(const std::string& msg)
+int adsb_decoder::fs(const std::string& msgbin)
 {
-    std::string msgbin = hex2bin(msg);
+    // std::string msgbin = hex2bin(msg);
     int fs = std::bitset<3>(msgbin.substr(5, 3)).to_ulong();;
     return fs;
 }
-int adsb_decoder::dr(const std::string& msg)
+int adsb_decoder::dr(const std::string& msgbin)
 {
-    std::string msgbin = hex2bin(msg);
+    // std::string msgbin = hex2bin(msg);
     int dr = std::bitset<5>(msgbin.substr(8, 5)).to_ulong();;
     return dr;
 }
-int adsb_decoder::um(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::um(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int um = std::bitset<6>(msgbin.substr(13, 6)).to_ulong();;
     return um;
 }
@@ -389,10 +370,10 @@ int gray2alt(const std::string& binstr) {
     int alt = (n500 * 500 + n100 * 100) - 1300;
     return alt;
 }
-double adsb_decoder::ac(const std::string& msg, struct ADSBFrame& frame)
+double adsb_decoder::ac(const std::string& msgbin, struct ADSBFrame& frame)
 {
     double alt = 0;
-    std::string msgbin = hex2bin(msg);
+    // std::string msgbin = hex2bin(msg);
     std::string tmp = std::bitset<13> (msgbin.substr(19, 13)).to_string();
     // int w = tmp[6],q = tmp[8], j = tmp[6],k=tmp[8];
     // if (tmp.to_ulong()==0)
@@ -432,8 +413,8 @@ double adsb_decoder::ac(const std::string& msg, struct ADSBFrame& frame)
     return alt;
 }
 
-int adsb_decoder::vs(const std::string& msg) {
-    std::string msgbin = hex2bin(msg);
+int adsb_decoder::vs(const std::string& msgbin) {
+    // std::string msgbin = hex2bin(msg);
     int vs = std::bitset<1>(msgbin.substr(5, 1)).to_ulong();;
     return vs;
 }
@@ -478,15 +459,14 @@ int adsb_decoder::modesMessageLenByType(int type) {
         else
             return 0;
 }
-int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
+int adsb_decoder::decode(const std::string& msg, const std::string& msgbin, struct ADSBFrame& frame)
 {
     //ads-b: df 17, 18
     //mode s: df 4, 5, 20, 21
     //others: df 0, 16
     //adsb commb 前提是crc通过
-    std::string msgbin = hex2bin(msg);
 
-    int DF = adsb_decoder::df(msg);
+    int DF = adsb_decoder::df(msgbin);
     frame.df = DF;
     int bits = adsb_decoder::modesMessageLenByType(DF);
 
@@ -495,33 +475,33 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
     else if (bits == MODES_SHORT_MSG_BITS)
         std::string msg = msg.substr(0, MODES_SHORT_MSG_BITS);
     else std::string msg = msg;
-    int tc = adsb_decoder::tc(msg);
+    int tc = adsb_decoder::tc(msgbin);
     frame.tc = tc;
     switch (DF)
     {
         case 0:
-            frame.alt = ac(msg, frame);
-            frame.vs = vs(msg);
+            frame.alt = ac(msgbin, frame);
+            frame.vs = vs(msgbin);
             break;
 
         case 4:
-            frame.flight_status = fs(msg);
-            frame.downlink_request = dr(msg);
-            frame.utility_message = um(msg);
-            frame.alt = ac(msg, frame);
+            frame.flight_status = fs(msgbin);
+            frame.downlink_request = dr(msgbin);
+            frame.utility_message = um(msgbin);
+            frame.alt = ac(msgbin, frame);
             break;
         case 5:
-            frame.downlink_request = dr(msg);
-            frame.utility_message = um(msg);
-            frame.flight_status = fs(msg);
-            frame.downlink_request = dr(msg);
-            frame.utility_message = um(msg);
-            // frame.ca = ca(msg);
+            frame.downlink_request = dr(msgbin);
+            frame.utility_message = um(msgbin);
+            frame.flight_status = fs(msgbin);
+            frame.downlink_request = dr(msgbin);
+            frame.utility_message = um(msgbin);
+            // frame.ca = ca(msgbin);
             break;
         case 16:
             //todo worong icao
-            frame.alt = ac(msg,frame);
-            frame.vs = vs(msg);
+            frame.alt = ac(msgbin,frame);
+            frame.vs = vs(msgbin);
             break;
         case 17:
 
@@ -530,7 +510,7 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
                 //Aircraft identification
                 if (tc == 2)
                 {
-                    switch (adsb_decoder::ca(msg))
+                    switch (adsb_decoder::ca(msgbin))
                     {
                     case 1:
                         frame.category = planeCategory_::Surface_emergency_vehicle;
@@ -554,7 +534,7 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
                 else if (tc == 3)
                 {
 
-                    switch (adsb_decoder::ca(msg))
+                    switch (adsb_decoder::ca(msgbin))
                     {
                     case 1:
                         frame.category = planeCategory_::Glider_sailplane;
@@ -581,7 +561,7 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
                 else if (tc == 4)
                 {
                     // frame.callsign = adsb_decoder::callsign(msg);
-                    switch (adsb_decoder::ca(msg))
+                    switch (adsb_decoder::ca(msgbin))
                     {
                     case 1:
                         frame.category = planeCategory_::light;
@@ -606,33 +586,33 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
                         break;
                     }
                 }
-                frame.callsign = callsign(msg);
+                frame.callsign = callsign(msgbin);
             }
             else if (tc <= 8 && tc >= 5)
             {
                 //todo Locally unambiguous decoding
                 //Surface position
-                frame.ss = adsb_decoder::ss(msg);
-                frame.saf = adsb_decoder::saf(msg);
-                frame.cprflag = adsb_decoder::cpr_flag(msg);
-                frame.latcpr = adsb_decoder::cpr_lat(msg);
-                frame.loncpr = adsb_decoder::cpr_lon(msg);
-                frame.movement = adsb_decoder::movement(msg);
+                frame.ss = adsb_decoder::ss(msgbin);
+                frame.saf = adsb_decoder::saf(msgbin);
+                frame.cprflag = adsb_decoder::cpr_flag(msgbin);
+                frame.latcpr = adsb_decoder::cpr_lat(msgbin);
+                frame.loncpr = adsb_decoder::cpr_lon(msgbin);
+                frame.movement = adsb_decoder::movement(msgbin);
                 if (frame.pre_lat==NULL)
                     break;
                 if (frame.cprflag)
                 {
                     //odd frame
                     frame.oddtime = clock();
-                    frame.latcpr_odd = adsb_decoder::cpr_lat(msg);
-                    frame.loncpr_odd = adsb_decoder::cpr_lon(msg);
+                    frame.latcpr_odd = adsb_decoder::cpr_lat(msgbin);
+                    frame.loncpr_odd = adsb_decoder::cpr_lon(msgbin);
                 }
                 else
                 {
                     //even frame
                     frame.eventime = clock();
-                    frame.latcpr_even = adsb_decoder::cpr_lat(msg);
-                    frame.loncpr_even = adsb_decoder::cpr_lon(msg);
+                    frame.latcpr_even = adsb_decoder::cpr_lat(msgbin);
+                    frame.loncpr_even = adsb_decoder::cpr_lon(msgbin);
                 }
                 // cal lat & lon
                 if (abs((double)(frame.eventime - frame.oddtime)) / CLOCKS_PER_SEC<500000)
@@ -683,7 +663,7 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
 
                 }
 
-                frame.heading = adsb_decoder::ground_track(msg)*360.0/128.0;
+                frame.heading = adsb_decoder::ground_track(msgbin)*360.0/128.0;
                 frame.velocity = speed_for_df17(frame.movement);
             }
             else if (tc <= 18 && tc >= 9)
@@ -693,24 +673,24 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
                 //Introduced an additional Horizontal Containment Radius (Rc) level within
                 //NIC = 6 of the airborne position message(TC = 13)
                 //altitude represents the barometric altitude of the aircraft
-                frame.ss = adsb_decoder::ss(msg);
-                frame.saf = adsb_decoder::saf(msg);
-                frame.cprflag = adsb_decoder::cpr_flag(msg);
-                frame.latcpr = adsb_decoder::cpr_lat(msg);
-                frame.loncpr = adsb_decoder::cpr_lon(msg);
+                frame.ss = adsb_decoder::ss(msgbin);
+                frame.saf = adsb_decoder::saf(msgbin);
+                frame.cprflag = adsb_decoder::cpr_flag(msgbin);
+                frame.latcpr = adsb_decoder::cpr_lat(msgbin);
+                frame.loncpr = adsb_decoder::cpr_lon(msgbin);
                 if (frame.cprflag)
                 {
                     //odd frame
                     frame.oddtime = clock();
-                    frame.latcpr_odd = adsb_decoder::cpr_lat(msg);
-                    frame.loncpr_odd = adsb_decoder::cpr_lon(msg);
+                    frame.latcpr_odd = adsb_decoder::cpr_lat(msgbin);
+                    frame.loncpr_odd = adsb_decoder::cpr_lon(msgbin);
                 }
                 else
                 {
                     //even frame
                     frame.eventime = clock();
-                    frame.latcpr_even = adsb_decoder::cpr_lat(msg);
-                    frame.loncpr_even = adsb_decoder::cpr_lon(msg);
+                    frame.latcpr_even = adsb_decoder::cpr_lat(msgbin);
+                    frame.loncpr_even = adsb_decoder::cpr_lon(msgbin);
                 }
                 // cal lat & lon
                 if (abs((double)(frame.eventime - frame.oddtime)) / CLOCKS_PER_SEC<500000)
@@ -762,30 +742,30 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
 
                 }
                 //cal alt
-                frame.alt = adsb_decoder::alt_Barometric(msg);
+                frame.alt = adsb_decoder::alt_Barometric(msgbin);
             }
             else if (tc <= 22 && tc >= 20)
             //高度、经纬度
             {   //GNSS altitude of the aircraft
                 //Airborne velocity
-                frame.ss = adsb_decoder::ss(msg);
-                frame.saf = adsb_decoder::saf(msg);
-                frame.cprflag = adsb_decoder::cpr_flag(msg);
-                frame.latcpr = adsb_decoder::cpr_lat(msg);
-                frame.loncpr = adsb_decoder::cpr_lon(msg);
+                frame.ss = adsb_decoder::ss(msgbin);
+                frame.saf = adsb_decoder::saf(msgbin);
+                frame.cprflag = adsb_decoder::cpr_flag(msgbin);
+                frame.latcpr = adsb_decoder::cpr_lat(msgbin);
+                frame.loncpr = adsb_decoder::cpr_lon(msgbin);
                 if (frame.cprflag)
                 {
                     //odd frame
                     frame.oddtime = clock();
-                    frame.latcpr_odd = adsb_decoder::cpr_lat(msg);
-                    frame.loncpr_odd = adsb_decoder::cpr_lon(msg);
+                    frame.latcpr_odd = adsb_decoder::cpr_lat(msgbin);
+                    frame.loncpr_odd = adsb_decoder::cpr_lon(msgbin);
                 }
                 else
                 {
                     //even frame
                     frame.eventime = clock();
-                    frame.latcpr_even = adsb_decoder::cpr_lat(msg);
-                    frame.loncpr_even = adsb_decoder::cpr_lon(msg);
+                    frame.latcpr_even = adsb_decoder::cpr_lat(msgbin);
+                    frame.loncpr_even = adsb_decoder::cpr_lon(msgbin);
                 }
                 // cal lat & lon
                 if (abs((double)(frame.eventime - frame.oddtime)) / CLOCKS_PER_SEC<500000)
@@ -837,39 +817,39 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
                     }
                 }
                 //cal alt
-                frame.alt = adsb_decoder::alt_GNSS(msg);
+                frame.alt = adsb_decoder::alt_GNSS(msgbin);
             }
             else if (tc == 19)
             {
                 //Airborne velocity
-                frame.st = adsb_decoder::subtype(msg);
+                frame.st = adsb_decoder::subtype(msgbin);
                 if (frame.st <= 2)
                 {
-                    int sns_ = sns(msg);
-                    int sew_ = swe(msg);
+                    int sns_ = sns(msgbin);
+                    int sew_ = swe(msgbin);
                     int vwe_, vsn_;
                     if (sew_ == 1)
-                        vwe_ = -1 * (vwe(msg) - 1);
+                        vwe_ = -1 * (vwe(msgbin) - 1);
                     else
-                        vwe_ = (vwe(msg) - 1);
+                        vwe_ = (vwe(msgbin) - 1);
 
                     if (sns_ == 1)
-                        vsn_ = -1 * (vns(msg) - 1);
+                        vsn_ = -1 * (vns(msgbin) - 1);
                     else
-                        vsn_ = (vns(msg) - 1);
+                        vsn_ = (vns(msgbin) - 1);
                     frame.velocity = sqrtf(vwe_ * vwe_ + vsn_ * vsn_);
                     frame.heading = atan((vwe_*1.0 / vsn_)) * 180.0 / pi;
                     if (frame.heading < 0)
                         frame.heading += 360.0;
-                    frame.vertical_rate = (vr(msg) - 1 * 64);
-                    frame.svr = svr(msg);
+                    frame.vertical_rate = (vr(msgbin) - 1 * 64);
+                    frame.svr = svr(msgbin);
                 }
                 else
                 {
-                    frame.velocity = as(msg);
+                    frame.velocity = as(msgbin);
 
-                    if (hs(msg))
-                        frame.heading = hdg(msg)*1.0 / 1024.0 * 360.0;
+                    if (hs(msgbin))
+                        frame.heading = hdg(msgbin)*1.0 / 1024.0 * 360.0;
                     else
                         frame.heading = NULL;
                 }
@@ -889,23 +869,23 @@ int adsb_decoder::decode(const std::string& msg, struct ADSBFrame& frame)
                 //NICc is defined in operational status messages. (TC = 31)
                 if (frame.tc31flag == 0)
                 {
-                    std::string msgbin = hex2bin(msg);
+                    // std::string msgbin = hex2bin(msg);
                     frame.version = std::bitset<10>(msgbin.substr(57, 10)).to_ulong();;
                 }
             }
             break;
         case 18:
-            frame.category = adsb_decoder::ca(msg);
+            frame.category = adsb_decoder::ca(msgbin);
             break;
         case 20:
-            frame.alt = ac(msg,frame);
-            frame.flight_status = fs(msg);
-            frame.vs = vs(msg);
+            frame.alt = ac(msgbin,frame);
+            frame.flight_status = fs(msgbin);
+            frame.vs = vs(msgbin);
             break;
         case 21:
-            frame.flight_status = fs(msg);
-            frame.downlink_request = dr(msg);
-            frame.utility_message = um(msg);
+            frame.flight_status = fs(msgbin);
+            frame.downlink_request = dr(msgbin);
+            frame.utility_message = um(msgbin);
             //id flight number
             break;
         case 24:
@@ -981,6 +961,7 @@ double calculateSignalPower(const int16_t* I, const int16_t* Q, size_t n) {
 
     return power;
 }
+
 void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long fs)
 {
     // this->struct_init();
@@ -997,10 +978,6 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
     int max_flag=0;
     float power;
 
-    //     //slide windows
-    QMutexLocker locker(&sharedresources->mutex);
-    sharedresources->isProcessing = true;
-    // #ifndef simulate
     for (int i = 0; i < (length - total_points); i++)
     {
         for (int i_ = 0; i_ < 240; i_++)
@@ -1090,8 +1067,8 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
         unsigned int tmp = crc(str,false);
         if (crc(str,false))
             continue;
-
-        tmp_icao = adsb_icao(str);
+        std::string msgbin = hex2bin(str);
+        tmp_icao = adsb_icao(str,msgbin);
 
         adsb_decoder::buffer += QString::fromStdString(tmp_icao) + "," + QString::number(df) + "," + QString::number(len) + ",";
         adsb_decoder::buffer += QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz") + ",";
@@ -1100,20 +1077,27 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
         // qDebug()<<QString::fromStdString(tmp_icao);
         int raw_len = fs/1000000*(len+8+10);
         // *out<<QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")<<",";
-        for(int p=0;p<raw_len;p++)
+
+        QStringList tempBuffer;
+        tempBuffer.reserve(raw_len+(len+8)*2+10);
+
+        for(int p=0;p<raw_len;p++)//@BUG这个循环加上就有问题了
         {
-            // *out<<QString::number(*(I+i+p))+QString("+j")+QString(*(Q+i+p))<<",";
-            // *out<<QString::number(static_cast<int>(*(I+i+p)))<<"+j"<<QString::number(static_cast<int>(*(Q+i+p)))<<",";
-            adsb_decoder::buffer += QString::number(static_cast<int>(*(I + i + p))) + "+j" + QString::number(static_cast<int>(*(Q + i + p))) + ",";
+            // adsb_decoder::buffer += QString::number(static_cast<int>(*(I + i + p))) + "+j" + QString::number(static_cast<int>(*(Q + i + p))) + ",";
             // *out<<static_cast<int>(*(I+i+p))<<"+j"<<static_cast<int>(*(Q+i+p))<<",";
+            tempBuffer.append(QString::number(static_cast<int>(*(I + i + p))) + "+j" +
+                              QString::number(static_cast<int>(*(Q + i + p))));
         }
         for(int p=0;p<(len+8)*2+10;p++)
         {
             // *out<<*(mean_+p)<<",";
-            adsb_decoder::buffer += QString::number(static_cast<int>(*(mean + p))) + ",";
+            tempBuffer.append(QString::number(static_cast<int>(*(mean + p))) + ",");
+            // adsb_decoder::buffer += QString::number(static_cast<int>(*(mean + p))) + ",";
             // *out<<static_cast<int>(*(mean+p))<<",";
         }
-        adsb_decoder::buffer += "\n";
+        tempBuffer.append("\n");
+        adsb_decoder::buffer += tempBuffer.join(",");
+        // adsb_decoder::buffer += "\n";
         adsb_decoder::bufferLineCount++;
         // *out<<"\n";
         if (adsb_decoder::bufferLineCount>=100)
@@ -1133,12 +1117,13 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
 
         frame->ICAO = tmp_icao;
         qDebug()<<tmp_icao;
+        msgbin = hex2bin(str);
         if(buff.contains(tmp_icao)) //已有
         {
             *last_frame = buff[tmp_icao];
             last_frame->lastSeen = QDateTime::currentDateTime();
             buff[tmp_icao] = *last_frame;
-            decode(str,*last_frame);
+            decode(str,msgbin,*last_frame);
             last_frame->msg = str;
             // struct ADSBFrame frame_cp = *frame;
             emit planeUpdate(*last_frame);
@@ -1150,7 +1135,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
             frame->lon = 999;
             frame->lat = 999;
             frame->velocity = 0;
-            decode(str,*frame);
+            decode(str,msgbin,*frame);
             frame->lastSeen = QDateTime::currentDateTime();
             buff.insert(frame->ICAO,*frame);
             frame->msg = str;
@@ -1164,15 +1149,20 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
             frame->velocity = 0;
 
         }
+        if (isInterruptionRequested()) {
+            qDebug() << "Worker thread interrupted during task execution.";
+            return;
+        }
 
         // decode(const std::string& msg, struct ADSBFrame& frame);
 
 
     }
+    emit taskComplete();
     //     emit process_whole_done();
-    sharedresources->isProcessing = false;
-    sharedresources->emit_signal_to_process = true;
-    sharedresources->condition.wakeAll();
+        // sharedresources->isProcessing = false;
+        // sharedresources->emit_signal_to_process = true;
+        // sharedresources->condition.wakeAll();
     // #else
     delete abs_;
     // #endif

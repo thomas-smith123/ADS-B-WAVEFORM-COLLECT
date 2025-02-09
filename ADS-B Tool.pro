@@ -14,7 +14,8 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     plot.cpp \
-    process.cpp \
+    process_.cpp \
+    processmanager.cpp \
     sharedmemorymanager.cpp \
     sharedsource.cpp
 
@@ -23,9 +24,12 @@ HEADERS += \
     filewriter.h \
     mainwindow.h \
     plot.h \
-    process.h \
+    predefine.h \
+    process_.h \
+    processmanager.h \
     sharedmemorymanager.h \
-    sharedsource.h
+    sharedsource.h \
+    taskQueue.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -42,3 +46,7 @@ RC_ICONS += \
 
 RESOURCES += \
     resources.qrc
+
+DISTFILES += \
+    leafletmap.html \
+    plane.png
