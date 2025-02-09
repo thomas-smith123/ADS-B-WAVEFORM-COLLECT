@@ -299,7 +299,6 @@ MainWindow::MainWindow(QWidget *parent)
     this->setCentralWidget(centralWidget);
 
     signal_connect();
-
     //variables
     ad9361_started_flag=false;
 
@@ -816,6 +815,12 @@ void MainWindow::removeMarker(const QString &id) {
     QString script = QString(
                          "removeMarker('%1');"
                          ).arg(id);
+    map->page()->runJavaScript(script);
+}
+void MainWindow::initMap() {
+    QString script = QString(
+                         "initMap();"
+        );
     map->page()->runJavaScript(script);
 }
 void MainWindow::maploadFinished(bool success)

@@ -76,7 +76,3 @@ CMakeLists.txt.user*
 *.idx
 *.idx
 *.csv
-*.idx
-*.csv
-/.qtc_clangd
-/debug

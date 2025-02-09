@@ -27,12 +27,12 @@
 // #include "filewriter.h"
 #include "processmanager.h"
 #include "predefine.h"
-
-class filewriter_;
+    
+    class filewriter_;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
+    
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
@@ -50,36 +50,37 @@ public:
     QPushButton *select, *clear;
     QTableWidget *table;
     QTextBrowser *log;
-        //tab
-        QWidget *tableWidget;
-        QMap<int,QString> adsb_frame_log_map;
-        QChartView *real, *imag, *abs;
-        QChart *real_chart,*imag_chart,*abs_chart;
-        QSplineSeries *series0;
-        plot *plot_;
-        int *occupied;
-        QMap<std::string, struct ADSBFrame> buff;
-        QLabel *df0_label,*df4_label,*df5_label,*df11_label,*df16_label,*df17_label,*df18_label,*df19_label,*df20_label,*df21_label,*df24_label;
-        QCheckBox *df0,*df4,*df5,*df11,*df16,*df17,*df18,*df19,*df20,*df21,*df24;
-        int df0_value=1,df4_value=1,df5_value=1,df11_value=1,df16_value=1,df17_value=1,df18_value=1,df19_value=1,df20_value=1,df21_value=1,df24_value=1;
-
+    //tab
+    QWidget *tableWidget;
+    QMap<int,QString> adsb_frame_log_map;
+    QChartView *real, *imag, *abs;
+    QChart *real_chart,*imag_chart,*abs_chart;
+    QSplineSeries *series0;
+    plot *plot_;
+    int *occupied;
+    QMap<std::string, struct ADSBFrame> buff;
+    QLabel *df0_label,*df4_label,*df5_label,*df11_label,*df16_label,*df17_label,*df18_label,*df19_label,*df20_label,*df21_label,*df24_label;
+    QCheckBox *df0,*df4,*df5,*df11,*df16,*df17,*df18,*df19,*df20,*df21,*df24;
+    int df0_value=1,df4_value=1,df5_value=1,df11_value=1,df16_value=1,df17_value=1,df18_value=1,df19_value=1,df20_value=1,df21_value=1,df24_value=1;
+    
     void signal_connect();
-
+    
     //variables
     bool ad9361_started_flag;
-
+    
     board_read *ad9361;
     adsb_decoder *adsb_process;
     QThread *read_thread, *process_thread, *plot_thread, *filewriter_thread;
     sharedsource *sharedresource;
     filewriter_ *filewriter;
     processManager *manager;
-
+    
     QTableWidgetItem *tmpItem;
+
 signals:
     void ad9361_read_start();
     void file_selected(QString FilePath);
-
+    
 public slots:
     void onPushselect();
     void clearStatistic();
@@ -91,6 +92,7 @@ public slots:
     void updateMarker(const QString &id, double lng, double lat, double angle);
     void removeMarker(const QString &id);
     void maploadFinished(bool success);
+    void initMap();
     void onPushdf0();
     void onPushdf4();
     void onPushdf5();
