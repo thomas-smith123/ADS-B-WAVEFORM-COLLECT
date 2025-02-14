@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
         url_label = new QLabel;
         url_label->setText("url:");
         url = new QLineEdit;
-        url->setText("ip:192.168.3.111");
+        url->setText("ip:193.168.1.5");
         BW = new QLineEdit;
         BW->setFixedWidth(50);
         BW->setText("5");
@@ -62,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
         numthread->setRange(2,15);
         numthread->setValue(5);
         numthread_label = new QLabel;
-        numthread_label->setText("NumThread:");
+        numthread_label->setText("Threads:");
         url->setEnabled(false);
         fs->setEnabled(false);
         fc->setEnabled(false);

@@ -4,21 +4,17 @@
  * @LastEditTime: 2025-02-07 09:40:19
  * @FilePath: \undefinedc:\jiangrd3\ADS-B-WAVEFORM-COLLECT\readme.md
 -->
-发现问题了，在构造函数上出现些问题，修改构造函数后就正常了。
-目前是构造函数写在头文件里面是没有问题的，如下
-```cpp
-/*******header file*******/
-adsb_decoder(TaskQueue *taskQueue, QObject *parent = nullptr): taskQueue(taskQueue){
-
-};
+- 库的获取
 ```
-而写成下面这样就不行
-```cpp
-/*******header file*******/
-adsb_decoder(TaskQueue *taskQueue, QObject *parent = nullptr);
-/*******source file*******/
-adsb_decoder::adsb_decoder(TaskQueue *tasksQueue, QObject *parent): taskQueue(taskQueue)
-{
-
-}
+git clone https://github.com/analogdevicesinc/libiio.git
+git checkout 2023_R2
 ```
+For linux
+```
+cd libiio
+mkdir build && cd build
+make ..
+cmake ..
+```
+windows同理
+linux下保留.so文件，windows保留lib和dll，然后在qt中添加就行
