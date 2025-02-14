@@ -29,6 +29,16 @@ QMap<int,std::string> planeCategory={
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    db = QSqlDatabase::addDatabase("QSQLITE");
+    /* data from https://opensky-network.org/datasets/#metadata/*/
+    db.setDatabaseName("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+    if (!db.open()) {
+        qDebug() << "Error: Could not open database.";
+    }
+    query_counrty = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+    query_operator = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+    query_manufacturerName = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+
     centralWidget = new QWidget;
     gridLayout = new QGridLayout;
     ConfigLayout = new QHBoxLayout;
@@ -109,6 +119,8 @@ MainWindow::MainWindow(QWidget *parent)
 
             {
                 adsb_frame_log_map[adsb_header::ICAO] = "ICAO";
+                adsb_frame_log_map[adsb_header::OPERATOR] = "Operator";
+                adsb_frame_log_map[adsb_header::manufactory] = "Manufactory";
                 adsb_frame_log_map[adsb_header::DF] = "DF";
                 adsb_frame_log_map[adsb_header::survive_time] = tr("LastSeen");
                 adsb_frame_log_map[adsb_header::Altitude] = tr("Altitude");
@@ -298,6 +310,9 @@ MainWindow::MainWindow(QWidget *parent)
     centralWidget->setLayout(gridLayout);
     this->setCentralWidget(centralWidget);
 
+    query_counrty.prepare("SELECT \"country\" FROM aircraft WHERE \"icao24\" = :id");
+    query_operator.prepare("SELECT \"operatorCallsign\" FROM aircraft WHERE \"icao24\" = :id");
+    query_manufacturerName.prepare("SELECT \"manufacturerName\" FROM aircraft WHERE \"icao24\" = :id");
     signal_connect();
     //variables
     ad9361_started_flag=false;
@@ -415,10 +430,10 @@ void MainWindow::onPushselect()
 
             manager->stopprocessing();
             read_thread->quit();
-            filewriter_thread->quit();
-
 
             read_thread->wait();
+            filewriter_thread->quit();
+
             filewriter_thread->wait();
 
             ad9361->deleteLater();
@@ -534,7 +549,7 @@ void MainWindow::writeFramelog(struct ADSBFrame a)
 
 void MainWindow::table_update(struct ADSBFrame adsb_frame)
 {
-    if(buff.contains(adsb_frame.ICAO))
+    if(tablemap.contains(adsb_frame.ICAO))
     {
         for(int i=0;i<table->rowCount();i++)
         {
@@ -661,10 +676,24 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
     }
     else
     {
-        buff.insert(adsb_frame.ICAO, adsb_frame);
-
         int row = table->rowCount();//这里可以试着用map
         table->insertRow(row);
+        tablemap.insert(adsb_frame.ICAO, adsb_frame);
+        query_operator.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
+        query_manufacturerName.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
+        if (query_operator.exec() && query_operator.next()) {
+            QString airline = query_operator.value(0).toString();
+            // qDebug() << "Airline:" << airline;
+            table->setItem(row, adsb_header::OPERATOR,new QTableWidgetItem(airline));
+        }
+        if (query_manufacturerName.exec() && query_manufacturerName.next()) {
+            QString airline = query_manufacturerName.value(0).toString();
+            // qDebug() << "Manu:" << airline;
+            table->setItem(row, adsb_header::manufactory,new QTableWidgetItem(airline));
+        }
+
+
+
         table->setItem(row, adsb_header::Message, new QTableWidgetItem(QString::fromStdString( adsb_frame.msg)));
         table->setItem(row, adsb_header::ICAO, new QTableWidgetItem(QString::fromStdString(adsb_frame.ICAO)));
         table->setItem(row, adsb_header::CNT, new QTableWidgetItem(QString::number(1)));
@@ -719,6 +748,7 @@ void MainWindow::removeExpiredAircraft(void)
 {
     // 获取当前时间
     // updateTimer.
+    std::string ddd;
     QDateTime currentTime = QDateTime::currentDateTime();
 
     // 遍历表的所有行（从最后一行开始，以避免删除行导致的索引变化）
@@ -726,16 +756,28 @@ void MainWindow::removeExpiredAircraft(void)
         // 获取第二列的时间（假设格式为 "yyyy-MM-dd HH:mm:ss"）
         QTableWidgetItem *item = table->item(row, adsb_header::survive_time); // 第二列的索引为1
         QTableWidgetItem *icao = table->item(row, adsb_header::ICAO);
-        if (item) {
+        if (item && icao) {
             QDateTime itemTime = QDateTime::fromString(item->text());
 
             // 检查转换是否成功，并且比较时间差
-            if (itemTime.isValid() && itemTime.secsTo(currentTime) > 120) { // 300秒 = 5分钟
-                adsb_process->buff.remove((icao->text()).toStdString());
+            if (itemTime.isValid() && itemTime.secsTo(currentTime) > 240) { // 300秒 = 5分钟
+                ddd = icao->text().toStdString();
+                tablemap.remove((icao->text()).toStdString());
+                manager->buffer.remove((icao->text()).toStdString());
+                // adsb_process->buff.remove((icao->text()).toStdString());
                 if (aircraftMap.contains(icao->text().toStdString()))
                 {
-                    aircraftMap.remove(icao->text().toStdString());
-                    removeMarker(icao->text());
+                    QString icaoText = icao->text(); // 保存ICAO标识符
+
+                    // 先从缓存和地图中删除相关数据
+                    // adsb_process->buff.remove(icaoText.toStdString());
+                    if (aircraftMap.contains(icaoText.toStdString()))
+                    {
+                        aircraftMap.remove(icaoText.toStdString());
+                        removeMarker(icao->text());
+                    }
+                    // aircraftMap.remove(icao->text().toStdString());
+                    // removeMarker(icao->text());
                 }
                 // adsb_process1->buff.remove((icao->text()).toStdString());
                 // for (int col = 0; col < table->columnCount(); ++col) {

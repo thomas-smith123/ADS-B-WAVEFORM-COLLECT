@@ -446,6 +446,7 @@ Makefile: "ADS-B Tool.pro" ..\..\Qt\6.7.2\msvc2019_64\mkspecs\win32-msvc\qmake.c
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Qml.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Network.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Positioning.prl \
+		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Sql.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Core.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6QmlBuiltins.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6EntryPoint.prl \
@@ -469,6 +470,7 @@ Makefile: "ADS-B Tool.pro" ..\..\Qt\6.7.2\msvc2019_64\mkspecs\win32-msvc\qmake.c
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Qmld.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Networkd.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Positioningd.prl \
+		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Sqld.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Cored.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6QmlBuiltinsd.prl \
 		..\..\Qt\6.7.2\msvc2019_64\lib\Qt6EntryPointd.prl
@@ -835,6 +837,7 @@ Makefile: "ADS-B Tool.pro" ..\..\Qt\6.7.2\msvc2019_64\mkspecs\win32-msvc\qmake.c
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Qml.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Network.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Positioning.prl:
+..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Sql.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Core.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6QmlBuiltins.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6EntryPoint.prl:
@@ -858,6 +861,7 @@ resources.qrc:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Qmld.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Networkd.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Positioningd.prl:
+..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Sqld.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6Cored.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6QmlBuiltinsd.prl:
 ..\..\Qt\6.7.2\msvc2019_64\lib\Qt6EntryPointd.prl:

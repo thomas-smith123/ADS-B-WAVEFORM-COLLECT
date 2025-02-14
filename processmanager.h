@@ -4,7 +4,7 @@
 #include <QObject>
 #include "process_.h"
 #include "taskQueue.h"
-
+#include "globalBuffer.h"
 class filewriter_;
 class MainWindow; // forward declear
 class processManager : public QObject
@@ -20,12 +20,13 @@ public:
     filewriter_ *filewriter;
     std::string fileName;
     QFile *file;
+    GlobalBuffer buffer;
 public slots:
     void addNewTask(int16_t* I, int16_t* Q, long int dataSize, long long fs);
     void allTaskFinished();
 private slots:
     void onTaskCompleted() {
-        qDebug() << "Task completed for range";
+        // qDebug() << "Task completed for range";
     }
 
 signals:

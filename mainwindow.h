@@ -27,6 +27,9 @@
 // #include "filewriter.h"
 #include "processmanager.h"
 #include "predefine.h"
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include "process_.h"
     
     class filewriter_;
 class MainWindow : public QMainWindow
@@ -76,6 +79,8 @@ public:
     processManager *manager;
     
     QTableWidgetItem *tmpItem;
+    QSqlDatabase db;
+    QSqlQuery query_counrty,query_operator,query_manufacturerName;
 
 signals:
     void ad9361_read_start();
@@ -109,9 +114,12 @@ private:
     QDateTime currentTime;
     QWebEngineView *map;
     QMap<std::string, int> aircraftMap;
+    QMap<std::string, struct ADSBFrame> tablemap;
 };
 enum adsb_header{
     ICAO=0,
+    OPERATOR,
+    manufactory,
     survive_time,
     Altitude,
     Longitude,

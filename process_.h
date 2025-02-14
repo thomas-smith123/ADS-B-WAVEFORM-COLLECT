@@ -20,6 +20,7 @@
 #include <QFile>
 #include "QDebug"
 #include "QQueue"
+#include "globalBuffer.h"
 // #include "processmanager.h"
 
 #define pi 3.1415926
@@ -42,10 +43,12 @@ public:
     QFile *file;
     QTextStream *out;
     QString buffer;
+    GlobalBuffer *gBuffer;
     int bufferLineCount;
-    explicit adsb_decoder(TaskQueue *taskQueue, QObject *parent = nullptr):taskQueue(taskQueue){
+    explicit adsb_decoder(TaskQueue *taskQueue,GlobalBuffer *globalbuffer, QObject *parent = nullptr):taskQueue(taskQueue){
         // sharedresources = sharedresource;
         cnt = 0;
+        gBuffer = globalbuffer;
         // adsb_decoder::bufferSize = 100000;
         frame = new ADSBFrame;
         last_frame = new ADSBFrame;
@@ -95,7 +98,7 @@ public:
     double ac(const std::string& msg, struct ADSBFrame& frame);//altitude code
     std::string id(const std::string& msg);
 
-    QMap<std::string, struct ADSBFrame> buff;
+    // QMap<std::string, struct ADSBFrame> buff;
 
 private:
 
@@ -127,6 +130,12 @@ protected:
             this->do_process(task.I,task.Q,task.windowSize,task.fs);
         }
         qDebug() << "Thread exiting...";
+        if (adsb_decoder::bufferLineCount>=0)
+        {
+            emit writefile(adsb_decoder::buffer);
+            buffer.clear();
+            adsb_decoder::bufferLineCount=0;
+        }
     }; //  this need to be decleared first, and then override it
 
 public:

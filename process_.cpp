@@ -1,17 +1,24 @@
 #include "process_.h"
 #include <sstream>
 #include <QObject>
+#include <QTimer>
 extern double pre_lat,pre_lon;
 char ais_charset[] = "?ABCDEFGHIJKLMNOPQRSTUVWXYZ????? ???????????????0123456789??????";
 
 adsb_decoder::~adsb_decoder() {
     qDebug()<<"adsb_decoder delete";
-    if (adsb_decoder::bufferLineCount>=0)
-    {//可以写了
-        emit writefile(adsb_decoder::buffer);
-        // buffer.clear();
-        adsb_decoder::bufferLineCount=0;
-    }
+    // if (adsb_decoder::bufferLineCount>=0)
+    // {//可以写了
+    //     QTimer::singleShot(0, this, [this]() {
+    //         QMetaObject::invokeMethod(this, "emitSignal", Qt::QueuedConnection, Q_ARG(int, 100));
+    //     });
+    //     QTimer::singleShot(0, this, [this]() {
+    //         emit writefile(adsb_decoder::buffer);  // 延迟发射带参数的信号
+    //     });
+    //     // emit writefile(adsb_decoder::buffer);
+    //     buffer.clear();
+    //     adsb_decoder::bufferLineCount=0;
+    // }
     // file->close();
     // delete out;
 }
@@ -1056,7 +1063,6 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
 
             }
         }
-
         power = calculateSignalPower(I+i,Q+i,(len+8)*point*2);
         if (power<0.01)
             continue;
@@ -1112,13 +1118,14 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
         // emit writelog(str);
 
         frame->ICAO = tmp_icao;
-        qDebug()<<tmp_icao;
+        // qDebug()<<tmp_icao;
         msgbin = hex2bin(str);
-        if(buff.contains(tmp_icao)) //已有
+        if(gBuffer->contains(tmp_icao)) //已有
         {
-            *last_frame = buff[tmp_icao];
+            *last_frame = gBuffer->get(tmp_icao);
             last_frame->lastSeen = QDateTime::currentDateTime();
-            buff[tmp_icao] = *last_frame;
+            gBuffer->update(tmp_icao,*last_frame);
+            // buff[tmp_icao] = *last_frame;
             decode(str,msgbin,*last_frame);
             last_frame->msg = str;
             // struct ADSBFrame frame_cp = *frame;
@@ -1133,7 +1140,8 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
             frame->velocity = 0;
             decode(str,msgbin,*frame);
             frame->lastSeen = QDateTime::currentDateTime();
-            buff.insert(frame->ICAO,*frame);
+            gBuffer->insert(frame->ICAO,*frame);
+            // buff.insert(frame->ICAO,*frame);
             frame->msg = str;
             // struct ADSBFrame frame_cp = *frame;
             emit planeUpdate(*frame);

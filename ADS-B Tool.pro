@@ -1,4 +1,4 @@
-QT       += core gui quickwidgets location webenginewidgets webchannel network charts
+QT       += core gui quickwidgets location webenginewidgets webchannel network charts sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -22,6 +22,7 @@ SOURCES += \
 HEADERS += \
     board_read.h \
     filewriter.h \
+    globalBuffer.h \
     mainwindow.h \
     plot.h \
     predefine.h \
