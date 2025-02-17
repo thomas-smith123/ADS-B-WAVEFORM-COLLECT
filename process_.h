@@ -106,7 +106,7 @@ private:
     int bin2int(const std::string& binstr);
     unsigned int hex_to_int(const std::string& hex);
     int mod(int a, int b);
-    int nlz(uint64_t x);//number of longitude zones
+    int nlz(float x);//number of longitude zones
     int adsb_commb(int df);
 
     TaskQueue *taskQueue;

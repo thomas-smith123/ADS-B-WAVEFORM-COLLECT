@@ -448,7 +448,7 @@ std::string adsb_decoder::id(const std::string& msg)
 int adsb_decoder::mod(int a, int b) {
     return a - b * floor(a / b);
 }
-int adsb_decoder::nlz(uint64_t x) {
+int adsb_decoder::nlz(float x) {
     int result = floor(2 * pi / std::acos(1 - ((1 - std::cos(pi / 2 / NZ)) / (std::cos(pi / 180 * x) * std::cos(pi / 180 * x)))));
     return result;
 }
@@ -1122,11 +1122,22 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
         msgbin = hex2bin(str);
         if(gBuffer->contains(tmp_icao)) //已有
         {
+            {
+                // *last_frame = gBuffer->get(tmp_icao);
+                // last_frame->lastSeen = QDateTime::currentDateTime();
+                // gBuffer->update(tmp_icao,*last_frame);
+                // // buff[tmp_icao] = *last_frame;
+                // decode(str,msgbin,*last_frame);
+                // last_frame->msg = str;
+                // // struct ADSBFrame frame_cp = *frame;
+                // emit planeUpdate(*last_frame);
+            }
             *last_frame = gBuffer->get(tmp_icao);
             last_frame->lastSeen = QDateTime::currentDateTime();
-            gBuffer->update(tmp_icao,*last_frame);
+
             // buff[tmp_icao] = *last_frame;
             decode(str,msgbin,*last_frame);
+            gBuffer->update(tmp_icao,*last_frame);
             last_frame->msg = str;
             // struct ADSBFrame frame_cp = *frame;
             emit planeUpdate(*last_frame);

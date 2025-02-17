@@ -35,9 +35,9 @@ MainWindow::MainWindow(QWidget *parent)
     if (!db.open()) {
         qDebug() << "Error: Could not open database.";
     }
-    query_counrty = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+    query_OOPERATORCallsign = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
     query_operator = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
-    query_manufacturerName = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+    query_model = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
 
     centralWidget = new QWidget;
     gridLayout = new QGridLayout;
@@ -120,14 +120,15 @@ MainWindow::MainWindow(QWidget *parent)
             {
                 adsb_frame_log_map[adsb_header::ICAO] = "ICAO";
                 adsb_frame_log_map[adsb_header::OPERATOR] = "Operator";
-                adsb_frame_log_map[adsb_header::manufactory] = "Manufactory";
+                adsb_frame_log_map[adsb_header::OOPERATORCallsign] = "OperatorCallsign";
+                adsb_frame_log_map[adsb_header::model] = "Model";
                 adsb_frame_log_map[adsb_header::DF] = "DF";
                 adsb_frame_log_map[adsb_header::survive_time] = tr("LastSeen");
                 adsb_frame_log_map[adsb_header::Altitude] = tr("Altitude");
                 adsb_frame_log_map[adsb_header::Longitude] = tr("Longitude");
                 adsb_frame_log_map[adsb_header::Latitude] = tr("Latitude");
                 adsb_frame_log_map[adsb_header::Velocity] = tr("Velocity");
-                adsb_frame_log_map[adsb_header::Time] = "Time";
+                // adsb_frame_log_map[adsb_header::Time] = "Time";
                 adsb_frame_log_map[adsb_header::VS] = "Vertical status";
                 adsb_frame_log_map[adsb_header::CA] = "Plane";
                 adsb_frame_log_map[adsb_header::Message] = "Message";
@@ -310,9 +311,9 @@ MainWindow::MainWindow(QWidget *parent)
     centralWidget->setLayout(gridLayout);
     this->setCentralWidget(centralWidget);
 
-    query_counrty.prepare("SELECT \"country\" FROM aircraft WHERE \"icao24\" = :id");
-    query_operator.prepare("SELECT \"operatorCallsign\" FROM aircraft WHERE \"icao24\" = :id");
-    query_manufacturerName.prepare("SELECT \"manufacturerName\" FROM aircraft WHERE \"icao24\" = :id");
+    query_OOPERATORCallsign.prepare("SELECT \"operatorCallsign\" FROM aircraft WHERE \"icao24\" = :id");
+    query_operator.prepare("SELECT \"operator\" FROM aircraft WHERE \"icao24\" = :id");
+    query_model.prepare("SELECT \"model\" FROM aircraft WHERE \"icao24\" = :id");
     signal_connect();
     //variables
     ad9361_started_flag=false;
@@ -649,12 +650,12 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
                     if (tmpItem)
                         tmpItem->setText(QString::number(adsb_frame.lon));
                     else
-                        table->setItem(i, adsb_header::Longitude, new QTableWidgetItem(QString::number(adsb_frame.lon)));
+                        table->setItem(i, adsb_header::Longitude, new QTableWidgetItem(QString::number(adsb_frame.lon,'f', 4)));
                     tmpItem = table->item(i, adsb_header::Latitude);
                     if (tmpItem)
                         tmpItem->setText(QString::number(adsb_frame.lat));
                     else
-                        table->setItem(i, adsb_header::Longitude, new QTableWidgetItem(QString::number(adsb_frame.lon)));
+                        table->setItem(i, adsb_header::Latitude, new QTableWidgetItem(QString::number(adsb_frame.lat,'f', 4)));
 
                     if (aircraftMap.contains(adsb_frame.ICAO))
                         updateMarker(QString::fromStdString(adsb_frame.ICAO),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
@@ -668,7 +669,7 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
                 if (tmpItem)
                     tmpItem->setText(QString::number(adsb_frame.alt,'f', 2));
                 else
-                    table->setItem(i, adsb_header::Altitude, new QTableWidgetItem(QString::number(adsb_frame.alt,'f', 2)));
+                    table->setItem(i, adsb_header::Altitude, new QTableWidgetItem(QString::number(adsb_frame.alt,'f', 4)));
                 //
                 break;
             }
@@ -680,16 +681,22 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
         table->insertRow(row);
         tablemap.insert(adsb_frame.ICAO, adsb_frame);
         query_operator.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
-        query_manufacturerName.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
+        query_OOPERATORCallsign.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
+        query_model.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
         if (query_operator.exec() && query_operator.next()) {
             QString airline = query_operator.value(0).toString();
             // qDebug() << "Airline:" << airline;
             table->setItem(row, adsb_header::OPERATOR,new QTableWidgetItem(airline));
         }
-        if (query_manufacturerName.exec() && query_manufacturerName.next()) {
-            QString airline = query_manufacturerName.value(0).toString();
+        if (query_model.exec() && query_model.next()) {
+            QString airline = query_model.value(0).toString();
             // qDebug() << "Manu:" << airline;
-            table->setItem(row, adsb_header::manufactory,new QTableWidgetItem(airline));
+            table->setItem(row, adsb_header::model,new QTableWidgetItem(airline));
+        }
+        if (query_OOPERATORCallsign.exec() && query_OOPERATORCallsign.next()) {
+            QString airline = query_OOPERATORCallsign.value(0).toString();
+            // qDebug() << "Manu:" << airline;
+            table->setItem(row, adsb_header::OOPERATORCallsign,new QTableWidgetItem(airline));
         }
 
 
@@ -732,8 +739,8 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
         if(adsb_frame.lat != 999 && adsb_frame.lon != 999)
         {
             //QString("%1").arg(num, 0, 'f', 2);
-            table->setItem(row, adsb_header::Latitude, new QTableWidgetItem(QString::number(adsb_frame.lat,10,5)));
-            table->setItem(row, adsb_header::Longitude, new QTableWidgetItem(QString::number(adsb_frame.lon,10,5)));
+            table->setItem(row, adsb_header::Latitude, new QTableWidgetItem(QString::number(adsb_frame.lat,'f', 4)));
+            table->setItem(row, adsb_header::Longitude, new QTableWidgetItem(QString::number(adsb_frame.lon,'f', 4)));
             addCustomMarker(QString::fromStdString(adsb_frame.ICAO),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
             aircraftMap.insert(adsb_frame.ICAO,0);
             // addCustomMarker(adsb_frame->ICAO,adsb_frame->lon,adsb_frame->lat,adsb_frame->heading);
