@@ -466,7 +466,7 @@ int adsb_decoder::modesMessageLenByType(int type) {
         else
             return 0;
 }
-int adsb_decoder::decode(const std::string& msg, const std::string& msgbin, struct ADSBFrame& frame)
+int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, struct ADSBFrame& frame)
 {
     //ads-b: df 17, 18
     //mode s: df 4, 5, 20, 21
@@ -476,12 +476,12 @@ int adsb_decoder::decode(const std::string& msg, const std::string& msgbin, stru
     int DF = adsb_decoder::df(msgbin);
     frame.df = DF;
     int bits = adsb_decoder::modesMessageLenByType(DF);
-
+    std::string msg ;
     if (bits == 0)
         return 0; //wrong df
     else if (bits == MODES_SHORT_MSG_BITS)
-        std::string msg = msg.substr(0, MODES_SHORT_MSG_BITS);
-    else std::string msg = msg;
+        msg = msg_.substr(0, MODES_SHORT_MSG_BITS);
+    else msg = msg_;
     int tc = adsb_decoder::tc(msgbin);
     frame.tc = tc;
     switch (DF)
@@ -900,6 +900,7 @@ int adsb_decoder::decode(const std::string& msg, const std::string& msgbin, stru
         default:
             break;
     }
+        return 1;
 }
 
 

@@ -37,7 +37,6 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-LIBS += C:/jiangrd3/ads-b/adsb/libiio.lib
 
 INCLUDEPATH += $$PWD/.
 DEPENDPATH += $$PWD/.
@@ -51,3 +50,9 @@ RESOURCES += \
 DISTFILES += \
     leafletmap.html \
     plane.png
+
+unix:!macx: LIBS += -L$$PWD/libiio/build/ -liio
+win: LIBS += C:/jiangrd3/ads-b/adsb/libiio.lib
+
+INCLUDEPATH += $$PWD/libiio/build
+DEPENDPATH += $$PWD/libiio/build

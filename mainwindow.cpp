@@ -69,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent)
         fc_label = new QLabel;
         fc_label->setText("fc(MHz):");
         numthread = new QSpinBox;
-        numthread->setRange(2,15);
+        numthread->setRange(1,15);
         numthread->setValue(5);
         numthread_label = new QLabel;
         numthread_label->setText("Threads:");
