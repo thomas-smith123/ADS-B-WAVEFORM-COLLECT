@@ -80,7 +80,7 @@ public:
     
     QTableWidgetItem *tmpItem;
     QSqlDatabase db;
-    QSqlQuery query_OOPERATORCallsign,query_operator,query_model;
+    QSqlQuery query_OPERATORCallsign,query_owner,query_model;
 
 signals:
     void ad9361_read_start();
@@ -120,7 +120,7 @@ enum adsb_header{
     ICAO=0,
     DF,
     OPERATOR,
-    OOPERATORCallsign,
+    OPERATORCallsign,
     model,
     survive_time,
     Altitude,

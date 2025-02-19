@@ -45,7 +45,7 @@ void processManager::addNewTask(int16_t* I, int16_t* Q, long int dataSize, long 
         {
             if (i>=1)
             {
-                WindowTask task = {I+i * chunkSize-tmp, Q+i * chunkSize-tmp, chunkSize, fs};
+                WindowTask task = {I+i * chunkSize-tmp+1, Q+i * chunkSize-tmp+1, chunkSize+tmp-1, fs};
                 taskQueue.addTask(task);
             }
             else
@@ -57,7 +57,7 @@ void processManager::addNewTask(int16_t* I, int16_t* Q, long int dataSize, long 
         }
         else
         {
-            WindowTask task = {I+i*chunkSize-tmp,Q+i*chunkSize-tmp, chunkSize+remainSize, fs};
+            WindowTask task = {I+i*chunkSize-tmp+1,Q+i*chunkSize-tmp+1, chunkSize+remainSize+tmp-1, fs};
             taskQueue.addTask(task);
         }
     }

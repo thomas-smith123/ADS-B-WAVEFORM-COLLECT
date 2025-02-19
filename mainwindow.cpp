@@ -35,8 +35,8 @@ MainWindow::MainWindow(QWidget *parent)
     if (!db.open()) {
         qDebug() << "Error: Could not open database.";
     }
-    query_OOPERATORCallsign = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
-    query_operator = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+    query_OPERATORCallsign = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
+    query_owner = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
     query_model = QSqlQuery("C:/jiangrd3/ADS-B-WAVEFORM-COLLECT/aircraft.db");
 
     centralWidget = new QWidget;
@@ -120,7 +120,7 @@ MainWindow::MainWindow(QWidget *parent)
             {
                 adsb_frame_log_map[adsb_header::ICAO] = "ICAO";
                 adsb_frame_log_map[adsb_header::OPERATOR] = "Operator";
-                adsb_frame_log_map[adsb_header::OOPERATORCallsign] = "OperatorCallsign";
+                adsb_frame_log_map[adsb_header::OPERATORCallsign] = "OperatorCallsign";
                 adsb_frame_log_map[adsb_header::model] = "Model";
                 adsb_frame_log_map[adsb_header::DF] = "DF";
                 adsb_frame_log_map[adsb_header::survive_time] = tr("LastSeen");
@@ -311,8 +311,8 @@ MainWindow::MainWindow(QWidget *parent)
     centralWidget->setLayout(gridLayout);
     this->setCentralWidget(centralWidget);
 
-    query_OOPERATORCallsign.prepare("SELECT \"operatorCallsign\" FROM aircraft WHERE \"icao24\" = :id");
-    query_operator.prepare("SELECT \"operator\" FROM aircraft WHERE \"icao24\" = :id");
+    query_OPERATORCallsign.prepare("SELECT \"operatorCallsign\" FROM aircraft WHERE \"icao24\" = :id");
+    query_owner.prepare("SELECT \"owner\" FROM aircraft WHERE \"icao24\" = :id");
     query_model.prepare("SELECT \"model\" FROM aircraft WHERE \"icao24\" = :id");
     signal_connect();
     //variables
@@ -680,11 +680,11 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
         int row = table->rowCount();//这里可以试着用map
         table->insertRow(row);
         tablemap.insert(adsb_frame.ICAO, adsb_frame);
-        query_operator.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
-        query_OOPERATORCallsign.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
+        query_owner.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
+        query_OPERATORCallsign.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
         query_model.bindValue(":id", "'"+QString::fromStdString(adsb_frame.ICAO)+"'");
-        if (query_operator.exec() && query_operator.next()) {
-            QString airline = query_operator.value(0).toString();
+        if (query_owner.exec() && query_owner.next()) {
+            QString airline = query_owner.value(0).toString();
             // qDebug() << "Airline:" << airline;
             table->setItem(row, adsb_header::OPERATOR,new QTableWidgetItem(airline));
         }
@@ -693,10 +693,10 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
             // qDebug() << "Manu:" << airline;
             table->setItem(row, adsb_header::model,new QTableWidgetItem(airline));
         }
-        if (query_OOPERATORCallsign.exec() && query_OOPERATORCallsign.next()) {
-            QString airline = query_OOPERATORCallsign.value(0).toString();
+        if (query_OPERATORCallsign.exec() && query_OPERATORCallsign.next()) {
+            QString airline = query_OPERATORCallsign.value(0).toString();
             // qDebug() << "Manu:" << airline;
-            table->setItem(row, adsb_header::OOPERATORCallsign,new QTableWidgetItem(airline));
+            table->setItem(row, adsb_header::OPERATORCallsign,new QTableWidgetItem(airline));
         }
 
 
