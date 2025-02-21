@@ -658,10 +658,10 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
                         table->setItem(i, adsb_header::Latitude, new QTableWidgetItem(QString::number(adsb_frame.lat,'f', 4)));
 
                     if (aircraftMap.contains(adsb_frame.ICAO))
-                        updateMarker(QString::fromStdString(adsb_frame.ICAO),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
+                        updateMarker(QString::fromStdString(adsb_frame.ICAO),QString::fromStdString(adsb_frame.callsign),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
                     else
                     {
-                        addCustomMarker(QString::fromStdString(adsb_frame.ICAO),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
+                        addCustomMarker(QString::fromStdString(adsb_frame.ICAO),QString::fromStdString(adsb_frame.callsign),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
                         aircraftMap.insert(adsb_frame.ICAO,0);
                     }
                 }
@@ -741,7 +741,7 @@ void MainWindow::table_update(struct ADSBFrame adsb_frame)
             //QString("%1").arg(num, 0, 'f', 2);
             table->setItem(row, adsb_header::Latitude, new QTableWidgetItem(QString::number(adsb_frame.lat,'f', 4)));
             table->setItem(row, adsb_header::Longitude, new QTableWidgetItem(QString::number(adsb_frame.lon,'f', 4)));
-            addCustomMarker(QString::fromStdString(adsb_frame.ICAO),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
+            addCustomMarker(QString::fromStdString(adsb_frame.ICAO),QString::fromStdString(adsb_frame.callsign),adsb_frame.lon,adsb_frame.lat,adsb_frame.heading);
             aircraftMap.insert(adsb_frame.ICAO,0);
             // addCustomMarker(adsb_frame->ICAO,adsb_frame->lon,adsb_frame->lat,adsb_frame->heading);
         }
@@ -847,17 +847,17 @@ void MainWindow::onPushdf21(){
 void MainWindow::onPushdf24(){
     df24_value = df24->isChecked()?1:0;
 };
-void MainWindow::addCustomMarker(const QString &id, double lng, double lat, double angle) {
+void MainWindow::addCustomMarker(const QString &id, const QString &flight, double lng, double lat, double angle) {
     QString script = QString(
-                         "addCustomMarker('%1', %2, %3, %4);"
-                         ).arg(id).arg(lng).arg(lat).arg(angle);
+                         "addCustomMarker('%1', '%2', %3, %4, %5);"
+                         ).arg(id).arg(flight).arg(lng).arg(lat).arg(angle);
     map->page()->runJavaScript(script);
 }
 
-void MainWindow::updateMarker(const QString &id, double lng, double lat, double angle) {
+void MainWindow::updateMarker(const QString &id, const QString &flight, double lng, double lat, double angle) {
     QString script = QString(
-                         "updateMarker('%1', %2, %3, %4 );"
-                         ).arg(id).arg(lng).arg(lat).arg(angle);
+                         "updateMarker('%1', '%2', %3, %4, %5 );"
+                         ).arg(id).arg(flight).arg(lng).arg(lat).arg(angle);
     map->page()->runJavaScript(script);
 }
 void MainWindow::removeMarker(const QString &id) {
@@ -877,6 +877,6 @@ void MainWindow::maploadFinished(bool success)
     if (success)
     {
         select->setEnabled(true);
-        addCustomMarker("test", 116.4, 39.91, 0.0);
+        // addCustomMarker("test", "test", 116.4, 39.91, 0.0);
     }
 }

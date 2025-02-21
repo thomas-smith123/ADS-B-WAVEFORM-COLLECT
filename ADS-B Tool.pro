@@ -51,8 +51,9 @@ DISTFILES += \
     leafletmap.html \
     plane.png
 
-unix:!macx: LIBS += -L$$PWD/libiio/build/ -liio
-win: LIBS += C:/jiangrd3/ads-b/adsb/libiio.lib
+LIBS += C:/jiangrd3/ads-b/adsb/libiio.lib
+# unix:!macx: LIBS += -L$$PWD/libiio/build/ -liio
+# win: LIBS += C:/jiangrd3/ads-b/adsb/libiio.lib
 
 INCLUDEPATH += $$PWD/libiio/build
 DEPENDPATH += $$PWD/libiio/build

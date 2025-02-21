@@ -30,7 +30,7 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include "process_.h"
-    
+
     class filewriter_;
 class MainWindow : public QMainWindow
 {
@@ -93,8 +93,8 @@ public slots:
     void removeExpiredAircraft(void);
     void table_update(struct ADSBFrame a);
     void plotChart(QSplineSeries *a,QSplineSeries *b,QSplineSeries *c);
-    void addCustomMarker(const QString &id, double lng, double lat, double angle);
-    void updateMarker(const QString &id, double lng, double lat, double angle);
+    void addCustomMarker(const QString &id, const QString &flight, double lng, double lat, double angle);
+    void updateMarker(const QString &id, const QString &flight, double lng, double lat, double angle);
     void removeMarker(const QString &id);
     void maploadFinished(bool success);
     void initMap();

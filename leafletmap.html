@@ -49,7 +49,7 @@
             });
         }
 
-        function addCustomMarker(id, lng, lat, angle) {
+        function addCustomMarker(id, flight, lng, lat, angle) {
             var marker = new AMap.Marker({
                 position: new AMap.LngLat(lng, lat),
                 icon: new AMap.Icon({
@@ -61,8 +61,9 @@
             });
 
             marker.content = id;
+            marker.flight = flight;
             marker.on('click', function(e) {
-                infoWindow.setContent(e.target.content);
+                infoWindow.setContent(e.target.content+"  "+e.target.flight);
                 infoWindow.open(map, e.target.getPosition());
             });
 
@@ -70,9 +71,10 @@
             map.add(marker);
         }
 
-        function updateMarker(id, lng, lat, angle) {
+        function updateMarker(id, flight, lng, lat, angle) {
             var marker = markers[id];
             if (marker) {
+                marker.flight = flight;
                 marker.setPosition(new AMap.LngLat(lng, lat));
                 marker.setAngle(angle);
             }
