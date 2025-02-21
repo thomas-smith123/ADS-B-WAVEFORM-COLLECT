@@ -446,11 +446,84 @@ std::string adsb_decoder::id(const std::string& msg)
 
 // private
 int adsb_decoder::mod(int a, int b) {
-    return a - b * floor(a / b);
+    int res = a % b;
+    if (res < 0) res += b;
+    return res;
 }
 int adsb_decoder::nlz(float x) {
     int result = floor(2 * pi / std::acos(1 - ((1 - std::cos(pi / 2 / NZ)) / (std::cos(pi / 180 * x) * std::cos(pi / 180 * x)))));
     return result;
+}
+int cprNLFunction(double lat) {
+    if (lat < 0) lat = -lat; /* Table is simmetric about the equator. */
+    if (lat < 10.47047130) return 59;
+    if (lat < 14.82817437) return 58;
+    if (lat < 18.18626357) return 57;
+    if (lat < 21.02939493) return 56;
+    if (lat < 23.54504487) return 55;
+    if (lat < 25.82924707) return 54;
+    if (lat < 27.93898710) return 53;
+    if (lat < 29.91135686) return 52;
+    if (lat < 31.77209708) return 51;
+    if (lat < 33.53993436) return 50;
+    if (lat < 35.22899598) return 49;
+    if (lat < 36.85025108) return 48;
+    if (lat < 38.41241892) return 47;
+    if (lat < 39.92256684) return 46;
+    if (lat < 41.38651832) return 45;
+    if (lat < 42.80914012) return 44;
+    if (lat < 44.19454951) return 43;
+    if (lat < 45.54626723) return 42;
+    if (lat < 46.86733252) return 41;
+    if (lat < 48.16039128) return 40;
+    if (lat < 49.42776439) return 39;
+    if (lat < 50.67150166) return 38;
+    if (lat < 51.89342469) return 37;
+    if (lat < 53.09516153) return 36;
+    if (lat < 54.27817472) return 35;
+    if (lat < 55.44378444) return 34;
+    if (lat < 56.59318756) return 33;
+    if (lat < 57.72747354) return 32;
+    if (lat < 58.84763776) return 31;
+    if (lat < 59.95459277) return 30;
+    if (lat < 61.04917774) return 29;
+    if (lat < 62.13216659) return 28;
+    if (lat < 63.20427479) return 27;
+    if (lat < 64.26616523) return 26;
+    if (lat < 65.31845310) return 25;
+    if (lat < 66.36171008) return 24;
+    if (lat < 67.39646774) return 23;
+    if (lat < 68.42322022) return 22;
+    if (lat < 69.44242631) return 21;
+    if (lat < 70.45451075) return 20;
+    if (lat < 71.45986473) return 19;
+    if (lat < 72.45884545) return 18;
+    if (lat < 73.45177442) return 17;
+    if (lat < 74.43893416) return 16;
+    if (lat < 75.42056257) return 15;
+    if (lat < 76.39684391) return 14;
+    if (lat < 77.36789461) return 13;
+    if (lat < 78.33374083) return 12;
+    if (lat < 79.29428225) return 11;
+    if (lat < 80.24923213) return 10;
+    if (lat < 81.19801349) return 9;
+    if (lat < 82.13956981) return 8;
+    if (lat < 83.07199445) return 7;
+    if (lat < 83.99173563) return 6;
+    if (lat < 84.89166191) return 5;
+    if (lat < 85.75541621) return 4;
+    if (lat < 86.53536998) return 3;
+    if (lat < 87.00000000) return 2;
+    else return 1;
+}
+int cprNFunction(double lat, int isodd) {
+    int nl = cprNLFunction(lat) - isodd;
+    if (nl < 1) nl = 1;
+    return nl;
+}
+
+double cprDlonFunction(double lat, int isodd) {
+    return 360.0 / cprNFunction(lat, isodd);
 }
 int adsb_decoder::modesMessageLenByType(int type) {
     if (type == 16 || type == 17 ||
@@ -465,6 +538,11 @@ int adsb_decoder::modesMessageLenByType(int type) {
             return MODES_SHORT_MSG_BITS;
         else
             return 0;
+}
+int cprModFunction(int a, int b) {
+    int res = a % b;
+    if (res < 0) res += b;
+    return res;
 }
 int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, struct ADSBFrame& frame)
 {
@@ -702,46 +780,45 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                 // cal lat & lon
                 if (abs((double)(frame.eventime - frame.oddtime)) / CLOCKS_PER_SEC<500000)
                 {
-                    //decode cpr
-                    float LAT_CPR_EVEN = frame.latcpr_even*1.0 / 131072;
-                    float LON_CPR_EVEN = frame.loncpr_even*1.0 / 131072;
-                    float LAT_CPR_ODD = frame.latcpr_odd*1.0 / 131072;
-                    float LON_CPR_ODD = frame.loncpr_odd*1.0 / 131072;
-                    int j = floor(59 * LAT_CPR_EVEN - 60 * LAT_CPR_ODD + 0.5);//latitude index
-                    float DLATE = 360 / 60, DLATO = 360 / 59;
-                    float LAT_EVEN = DLATE * (mod(j, 60) + LAT_CPR_EVEN);
-                    float LAT_ODD = DLATE * (mod(j, 59) + LAT_CPR_ODD);
-                    if (LAT_EVEN >= 270) LAT_EVEN -= 360;
-                    if (LAT_ODD >= 270) LAT_ODD -= 360;
-                    //check
-                    if (nlz(LAT_EVEN) != nlz(LAT_ODD))
+                    const double AirDlat0 = 360.0 / 60;
+                    const double AirDlat1 = 360.0 / 59;
+                    double lat0 = frame.latcpr_even;
+                    double lat1 = frame.latcpr_odd;
+                    double lon0 = frame.loncpr_even;
+                    double lon1 = frame.loncpr_odd;
+                    int j = floor(((59*lat0 - 60*lat1) / 131072) + 0.5);
+                    double rlat0 = AirDlat0 * (cprModFunction(j,60) + lat0 / 131072);
+                    double rlat1 = AirDlat1 * (cprModFunction(j,59) + lat1 / 131072);
+
+                    if (rlat0 >= 270) rlat0 -= 360;
+                    if (rlat1 >= 270) rlat1 -= 360;
+
+                    /* Check that both are in the same latitude zone, or abort. */
+                    if (cprNLFunction(rlat0) != cprNLFunction(rlat1))
                     {
                         //invalid
                         frame.lat = NULL;
                     }
                     else
                     {
-                        if (frame.eventime > frame.oddtime)
-                            frame.lat = LAT_EVEN;
-                        else
-                            frame.lat = LAT_ODD;
+
 
                         //check passed
                         if (frame.eventime > frame.oddtime)
                         {
-                            int ni = max(nlz(LAT_EVEN), 1);
-                            float DLON = 360.0 / ni;
-
-                            int m = floor(LON_CPR_EVEN * (nlz(LAT_EVEN - 1) - LON_CPR_ODD * nlz(LAT_EVEN) + 0.5));
-                            frame.lon = DLON * (mod(m, ni) + LON_CPR_EVEN);
+                            int ni = cprNFunction(rlat0,0);
+                            int m = floor((((lon0 * (cprNLFunction(rlat0)-1)) -
+                                            (lon1 * cprNLFunction(rlat0))) / 131072) + 0.5);
+                            frame.lon = cprDlonFunction(rlat0,0) * (cprModFunction(m,ni)+lon0/131072);
+                            frame.lat = rlat0;
                         }
                         else
                         {
-                            int ni = max(nlz(LAT_ODD) - 1, 1);
-                            float DLON = 360.0 / ni;
-
-                            int m = floor(LON_CPR_EVEN * (nlz(LAT_ODD - 1) - LON_CPR_ODD * nlz(LAT_ODD) + 0.5));
-                            frame.lon = DLON * (mod(m, ni) + LON_CPR_ODD);
+                            int ni = cprNFunction(rlat1,1);
+                            int m = floor((((lon0 * (cprNLFunction(rlat1)-1)) -
+                                            (lon1 * cprNLFunction(rlat1))) / 131072.0) + 0.5);
+                            frame.lon = cprDlonFunction(rlat1,1) * (cprModFunction(m,ni)+lon1/131072);
+                            frame.lat = rlat1;
                         }
                         if (frame.lon >= 180)
                             frame.lon = frame.lon - 360;
