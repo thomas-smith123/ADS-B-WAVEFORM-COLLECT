@@ -28,6 +28,8 @@ void aligned_free_qt(void* ptr) {
 // #include "processmanager.h"
 circular_buffer::circular_buffer(long int bufferSize, QObject *parent) : sharedMemory("CircularBufferSharedMemory") {
     size_t totalSize = sizeof(SharedMemoryHeader) + bufferSize * sizeof(int16_t) * 2;
+    if (sharedMemory.attach())
+        sharedMemory.detach();
     if (!sharedMemory.create(totalSize)) {
         qDebug() << "Shared memory creation failed:" << sharedMemory.errorString();
     }
@@ -123,7 +125,7 @@ void circular_buffer::receiveDataSlot(int16_t* I0, int16_t* Q0, long int size, l
 {
     pushData(I0, Q0, size);
     fs = fs_hz;
-    qDebug() << "pushed.";
+    // qDebug() << "pushed.";
 }
 // void circular_buffer::getdata(){
 //     const long int batchSize = SAMPLE_SIZE;  // 每次处理的数据量
