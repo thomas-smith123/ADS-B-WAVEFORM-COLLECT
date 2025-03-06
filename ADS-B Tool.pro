@@ -10,6 +10,8 @@ CONFIG += c++17
 
 SOURCES += \
     board_read.cpp \
+    board_tx.cpp \
+    circular_buffer.cpp \
     filewriter.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -21,6 +23,8 @@ SOURCES += \
 
 HEADERS += \
     board_read.h \
+    board_tx.h \
+    circular_buffer.h \
     filewriter.h \
     globalBuffer.h \
     mainwindow.h \

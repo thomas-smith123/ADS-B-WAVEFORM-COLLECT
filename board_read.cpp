@@ -4,10 +4,11 @@
 #include "random"
 #endif
 
-board_read::board_read(sharedsource* sharedresource,QObject *parent, double buffer_size)
+board_read::board_read(sharedsource* sharedresource,circular_buffer* ringHandle, QObject *parent, double buffer_size)
     : QObject{parent}
 {
     sharedresources = sharedresource;
+    ring_buffer = ringHandle;
     board_read::buffer_size = buffer_size;
     start_flag = false;
     // emit_signal_to_process = true;
@@ -68,8 +69,8 @@ void board_read::config(float bw=5,float fs=10,float lo=1091)
         IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 1, &rx0_q) && "RX chan q not found","RX chan q not found");
         // IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 2, &rx1_i) && "RX chan i not found","RX chan i not found");
         // IIO_ENSURE(get_ad9361_stream_ch(ctx, RX, rx, 3, &rx1_q) && "RX chan q not found","RX chan q not found");
-        //IIO_ENSURE(get_ad9361_stream_ch(ctx, TX, tx, 0, &tx0_i) && "TX chan i not found");
-        //IIO_ENSURE(get_ad9361_stream_ch(ctx, TX, tx, 1, &tx0_q) && "TX chan q not found");
+        // IIO_ENSURE(get_ad9361_stream_ch(ctx, TX, tx, 0, &tx0_i) && "TX chan i not found", "TX chan i not found");
+        // IIO_ENSURE(get_ad9361_stream_ch(ctx, TX, tx, 1, &tx0_q) && "TX chan q not found", "TX chan q not found");
 
         // printf("* Enabling IIO streaming channels\n");
 
@@ -77,11 +78,12 @@ void board_read::config(float bw=5,float fs=10,float lo=1091)
         iio_channel_enable(rx0_q);
         // iio_channel_enable(rx1_i);
         // iio_channel_enable(rx1_q);
-        //iio_channel_enable(tx0_i);
-        //iio_channel_enable(tx0_q);
+        // iio_channel_enable(tx0_i);
+        // iio_channel_enable(tx0_q);
 
         // printf("* Creating non-cyclic IIO buffers with 1 MiS\n");
         rxbuf = iio_device_create_buffer(rx, board_read::buffer_size, false);
+        // txbuf = iio_device_create_buffer(tx, board_read::buffer_size, false);
 
     }
     if(this->config_flag)
@@ -92,6 +94,10 @@ void board_read::config(float bw=5,float fs=10,float lo=1091)
         }
         p_inc = iio_buffer_step(rxbuf);
         p_end = (char*)iio_buffer_end(rxbuf);
+        // if (!txbuf) {
+        //     perror("Could not create RX buffer");
+        //     shutdownDevice();
+        // }
     }
 #else
 
@@ -108,13 +114,13 @@ void board_read::start_read()
 
         while (!this->stop_)
         {
-            QMutexLocker locker(&sharedresources->mutex);
-            while (sharedresources->isProcessing) {
-                sharedresources->condition.wait(&sharedresources->mutex);
-                // if(this->stop_)break;
-            }
+            // QMutexLocker locker(&sharedresources->mutex);
+            // while (sharedresources->isProcessing) {
+            //     sharedresources->condition.wait(&sharedresources->mutex);
+            //     // if(this->stop_)break;
+            // }
             long int cnt = 0;
-            if (sharedresources->emit_signal_to_process)
+            // if (sharedresources->emit_signal_to_process)
             {
                 // Refill RX buffer
                 nbytes_rx = iio_buffer_refill(rxbuf);
@@ -130,7 +136,8 @@ void board_read::start_read()
                     // Q1[cnt] = ((int16_t*)p_dat)[3];// Imag (Q)
                     cnt++;
                 }
-                sharedresources->emit_signal_to_process = false;
+                // sharedresources->emit_signal_to_process = false;
+                ring_buffer->receiveDataSlot(I0,Q0,board_read::buffer_size,rxcfg.fs_hz);
                 emit read_onece_done(I0,Q0,board_read::buffer_size,rxcfg.fs_hz);
             }
         }

@@ -50,8 +50,8 @@ public:
         cnt = 0;
         gBuffer = globalbuffer;
         // adsb_decoder::bufferSize = 100000;
-        frame = new ADSBFrame;
-        last_frame = new ADSBFrame;
+        frame = new struct ADSBFrame;
+        last_frame = new struct ADSBFrame;
         adsb_decoder::bufferLineCount = 0;
     }
     ~adsb_decoder();
@@ -101,7 +101,6 @@ public:
     // QMap<std::string, struct ADSBFrame> buff;
 
 private:
-
     std::vector<std::string> wrap(const std::string& str, size_t width);
     int bin2int(const std::string& binstr);
     unsigned int hex_to_int(const std::string& hex);

@@ -69,8 +69,8 @@ MainWindow::MainWindow(QWidget *parent)
         fc_label = new QLabel;
         fc_label->setText("fc(MHz):");
         numthread = new QSpinBox;
-        numthread->setRange(1,15);
-        numthread->setValue(5);
+        numthread->setRange(1,45);
+        numthread->setValue(15);
         numthread_label = new QLabel;
         numthread_label->setText("Threads:");
         url->setEnabled(false);
@@ -357,13 +357,16 @@ void MainWindow::onPushselect()
         select->setText("Disconnect");
         //
         sharedresource = new sharedsource;
+        ring_buffer = new circular_buffer;
+        data_buffer_thread = new QThread;
+        // ring_buffer->moveToThread(data_buffer_thread);
         QString url_content;
         url_content = url->text();
         QByteArray ba = url_content.toUtf8();
         QString BW_content = BW->text();
         QString fs_content = fs->text();
         QString fc_content = fc->text();
-        ad9361 = new board_read(sharedresource);
+        ad9361 = new board_read(sharedresource,ring_buffer);
         ad9361->ip = ba.data();
         ad9361->bw = BW_content.toFloat();
         ad9361->fs = fs_content.toFloat();
@@ -377,10 +380,11 @@ void MainWindow::onPushselect()
         read_thread = new QThread;
         // process_thread = new QThread;
         plot_thread = new QThread;
-
+        manager_thread = new QThread;
         filewriter_thread = new QThread;
         filewriter->moveToThread(filewriter_thread);
-        manager = new processManager(this,sharedresource,filewriter,numthread->value());//放filewriter可能有问题
+        manager = new processManager(this,sharedresource,filewriter,numthread->value(),ring_buffer,1024*1024*10);//放filewriter可能有问题
+        manager->moveToThread(manager_thread);
         ad9361->moveToThread(read_thread);
 
         plot_ = new plot;
@@ -389,47 +393,56 @@ void MainWindow::onPushselect()
         updateTimer = new QTimer(this);
 
         connect(this,SIGNAL(ad9361_read_start()),ad9361,SLOT(start_read()));
-        // connect(adsb_process,&adsb_decoder::process_done,this,&MainWindow::table_update);
         connect(updateTimer, &QTimer::timeout, this, &MainWindow::removeExpiredAircraft);
         // connect(updateTimer, &QTimer::timeout, adsb_process, &adsb_decoder::removeExpiredmap);
         updateTimer->start(300*1000); // 每 10 秒检查一次
         //采集完成后进行处理
-        connect(ad9361,&board_read::read_onece_done,manager,&processManager::addNewTask);
+        // connect(ad9361,&board_read::read_onece_done,manager,&processManager::addNewTask);
+        // connect(ad9361,&board_read::read_onece_done,ring_buffer,&circular_buffer::receiveDataSlot);
         connect(ad9361,&board_read::read_onece_done,plot_,&plot::dataUpdate);//FIXME
         connect(plot_,&plot::seriesPrepered,this,&MainWindow::plotChart);
+        connect(this,&MainWindow::getdata,manager,&processManager::getAndProcess);
 
         // 开启线程
         if (ad9361->config_flag)
         {
+            clearChart();
             plot_thread->start();
             filewriter_thread->start();
+            data_buffer_thread->start();
             manager->startprocessing();
+            manager_thread->start();
+
             read_thread->start();
             ad9361->stop_ = false;
+
             emit ad9361_read_start();
             ad9361_started_flag = true;
             ad9361->start_flag = 1;
+
+            emit getdata();
             select->setText(tr("Disconnect"));
             url->setEnabled(false);
             fs->setEnabled(false);
             fc->setEnabled(false);
             BW->setEnabled(false);
             numthread->setEnabled(false);
-            // qDebug()<<"simulate output";
-            // QThread::msleep(10000);
-            // manager->stopprocessing();
         }
     }
     else
     {
         // if(ad9361->config_flag )
         {
+
             ad9361->stop_ = true;
 
             ad9361->start_flag = 0;
             ad9361_started_flag = false;
 
             manager->stopprocessing();
+
+            data_buffer_thread->quit();
+            data_buffer_thread->wait();
             read_thread->quit();
 
             read_thread->wait();
@@ -450,6 +463,7 @@ void MainWindow::onPushselect()
         numthread->setEnabled(true);
 
         delete (filewriter);
+        delete ring_buffer;
         // delete(adsb_process1);
         delete manager;
         delete(updateTimer);
@@ -813,7 +827,18 @@ void MainWindow::plotChart(QSplineSeries *a,QSplineSeries *b,QSplineSeries *c)
     abs_chart->addSeries(c);
     // *occupied = 0;
 }
-
+void MainWindow::clearChart()
+{
+    // *occupied =1;
+    // series0->clear();
+    // real_chart->removeAllSeries();
+    // real_chart->addSeries(a);
+    // real_chart->removeSeries(a);
+    real_chart->removeAllSeries();
+    imag_chart->removeAllSeries();
+    abs_chart->removeAllSeries();
+    // *occupied = 0;
+}
 void MainWindow::onPushdf0(){
     df0_value = df0->isChecked()?1:0;
 };

@@ -27,15 +27,15 @@ void plot::dataUpdate(int16_t *I, int16_t *Q, long int length, long long fs)
         ps2.clear();
         ps3.clear();
         int j,cnt=0;
-        for(int i=0;i<length;i+=400)
+        for(int i=0;i<length;i+=2000)
         {
             ps1.push_back(QPoint((qreal) i, I[i]));
             ps2.push_back(QPoint((qreal) i, Q[i]));
-            ps3.push_back(QPoint((qreal) i, sqrt(I[i]*I[i]+Q[i]*Q[i])));
+            // ps3.push_back(QPoint((qreal) i, (I[i]*I[i]+Q[i]*Q[i])));
         }
         series0->replace(ps1);
         series1->replace(ps2);
-        series2->replace(ps3);
+        // series2->replace(ps3);
         emit seriesPrepered(series0,series1,series2);
     }
 }

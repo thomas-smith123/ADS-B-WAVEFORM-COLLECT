@@ -12,6 +12,7 @@ public:
     QSplineSeries *series0,*series1,*series2;
     int *occupied;
     QList<QPointF> ps1,ps2,ps3;
+    void clear_all();
 signals:
     void seriesPrepered(QSplineSeries* series0,QSplineSeries* series1,QSplineSeries* series3);
 public slots:

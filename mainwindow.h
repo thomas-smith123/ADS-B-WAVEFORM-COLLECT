@@ -30,8 +30,9 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include "process_.h"
+#include "circular_buffer.h"
 
-    class filewriter_;
+class filewriter_;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -73,7 +74,7 @@ public:
     
     board_read *ad9361;
     adsb_decoder *adsb_process;
-    QThread *read_thread, *process_thread, *plot_thread, *filewriter_thread;
+    QThread *read_thread, *process_thread, *plot_thread, *filewriter_thread,*data_buffer_thread,*manager_thread;
     sharedsource *sharedresource;
     filewriter_ *filewriter;
     processManager *manager;
@@ -82,10 +83,12 @@ public:
     QSqlDatabase db;
     QSqlQuery query_OPERATORCallsign,query_owner,query_model;
 
+    circular_buffer *ring_buffer;
+
 signals:
     void ad9361_read_start();
     void file_selected(QString FilePath);
-    
+    void getdata();
 public slots:
     void onPushselect();
     void clearStatistic();
@@ -93,6 +96,7 @@ public slots:
     void removeExpiredAircraft(void);
     void table_update(struct ADSBFrame a);
     void plotChart(QSplineSeries *a,QSplineSeries *b,QSplineSeries *c);
+    void clearChart();
     void addCustomMarker(const QString &id, const QString &flight, double lng, double lat, double angle);
     void updateMarker(const QString &id, const QString &flight, double lng, double lat, double angle);
     void removeMarker(const QString &id);

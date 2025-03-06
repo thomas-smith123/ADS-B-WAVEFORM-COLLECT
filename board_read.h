@@ -14,6 +14,7 @@
 // #include "QwaitCondition"
 #include "iostream"
 #include "sharedsource.h"
+#include "circular_buffer.h"
 // #include "overall_control.h"
 
 /* helper macros */
@@ -76,11 +77,12 @@ public:
     int16_t *I1;
     int16_t *Q1;
     void config(float bw,float fs,float lo);
-    explicit board_read(sharedsource* sharedresource, QObject *parent = nullptr, double buffer_siz=1024*1024);
+    explicit board_read(sharedsource* sharedresource, circular_buffer* ringHandle, QObject *parent = nullptr, double buffer_siz=1024*1024*5);
     ~board_read();
     ptrdiff_t p_inc;
     char *p_dat, *p_end;
     ssize_t nbytes_rx;
+
 
 signals:
     void read_onece_done(int16_t *I, int16_t *Q, long int length, long long fs);
@@ -120,6 +122,7 @@ private:
     bool cfg_ad9361_streaming_ch(struct iio_context* ctx, struct stream_cfg* cfg, enum iodev type, int chid);
 
     sharedsource *sharedresources;
+    circular_buffer *ring_buffer;
 
 public slots:
     void reset_to_emmit();

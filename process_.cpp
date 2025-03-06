@@ -1171,7 +1171,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
         for(int p=0;p<(len+8)*2+10;p++)
         {
             // *out<<*(mean_+p)<<",";
-            tempBuffer.append(QString::number(static_cast<int>(*(mean + p))) + ",");
+            tempBuffer.append(QString::number(static_cast<int>(*(mean + p))));
             // adsb_decoder::buffer += QString::number(static_cast<int>(*(mean + p))) + ",";
             // *out<<static_cast<int>(*(mean+p))<<",";
         }
@@ -1252,6 +1252,7 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
 
     }
     emit taskComplete();
+    // qDebug()<<"qqqq";
     //     emit process_whole_done();
         // sharedresources->isProcessing = false;
         // sharedresources->emit_signal_to_process = true;
