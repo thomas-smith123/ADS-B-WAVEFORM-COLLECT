@@ -23,7 +23,9 @@ struct ADSBFrame
     uint64_t latcpr,loncpr;
     uint64_t latcpr_even, loncpr_even;
     uint64_t latcpr_odd, loncpr_odd;
-    float lat=999.0, lon=999.0, pre_lat, pre_lon;
+    float lat=999.0, lon=999.0;
+    float pre_lat=0.0, pre_lon=0.0;
+    bool hasPreLocation=false; // Flag to indicate if pre_lat/pre_lon are valid
     float velocity,heading, vertical_rate;
     uint32_t svr; //0 for down, 1 for descending
     uint64_t movement;

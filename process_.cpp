@@ -343,25 +343,29 @@ int adsb_decoder::um(const std::string& msgbin) {
     int um = std::bitset<6>(msgbin.substr(13, 6)).to_ulong();;
     return um;
 }
+// Gray code to binary conversion
 int gray2int(const std::string& graystr) {
     int binary = 0;
-    binary = graystr[0] - '0'; // 第一位直接赋值
-    for (size_t i = 1; i < graystr.size(); ++i) {
-        binary = (binary << 1) | (((binary >> (i - 1)) & 1) ^ (graystr[i] - '0'));
+    for (size_t i = 0; i < graystr.size() && i < 32; ++i) {
+        binary ^= (graystr[i] - '0') << (graystr.size() - 1 - i);
     }
     return binary;
 }
 
-// 将灰码转为高度
+// Convert Gray-coded altitude to feet
 int gray2alt(const std::string& binstr) {
-    // 分割出 500 英尺和 100 英尺的部分
+    if (binstr.length() < 11) {
+        return -99999; // Invalid input
+    }
+    
+    // Split into 500ft (high 8 bits) and 100ft (low 3 bits) parts
     std::string gc500 = binstr.substr(0, 8);
+    std::string gc100 = binstr.substr(8, 3);
+    
     int n500 = gray2int(gc500);
-
-    // 100 英尺部分
-    std::string gc100 = binstr.substr(8);
     int n100 = gray2int(gc100);
 
+    // Check for invalid values
     if (n100 == 0 || n100 == 5 || n100 == 6) {
         return -99999;
     }
@@ -370,52 +374,51 @@ int gray2alt(const std::string& binstr) {
         n100 = 5;
     }
 
+    // Adjust n100 based on parity of n500
     if (n500 % 2) {
         n100 = 6 - n100;
     }
 
-    int alt = (n500 * 500 + n100 * 100) - 1300;
+    int alt = (n500 * 500 + n100 * 100) - 1000;
     return alt;
 }
 double adsb_decoder::ac(const std::string& msgbin, struct ADSBFrame& frame)
 {
     double alt = 0;
-    // std::string msgbin = hex2bin(msg);
     std::string tmp = std::bitset<13> (msgbin.substr(19, 13)).to_string();
-    // int w = tmp[6],q = tmp[8], j = tmp[6],k=tmp[8];
-    // if (tmp.to_ulong()==0)
-    //     return -99999;
+    
+    // Check for valid altitude encoding
     if (tmp[6] == '0' && tmp[8] == '0')
     {
+        // Format A: Gray-coded altitude (feet)
         char C1 = tmp[0];
         char A1 = tmp[1];
         char C2 = tmp[2];
         char A2 = tmp[3];
         char C4 = tmp[4];
         char A4 = tmp[5];
-        // char M = binstr[6];
         char B1 = tmp[7];
-        // char Q = binstr[8];
         char B2 = tmp[9];
         char D2 = tmp[10];
         char B4 = tmp[11];
         char D4 = tmp[12];
         std::string graystr = {D2, D4, A1, A2, A4, B1, B2, B4, C1, C2, C4};
         double alt = gray2alt(graystr)*1.0;
+        frame.unit = 1; // feet
         return alt;
     }
-        // return NULL;
     else if (tmp[6] == '1')
     {
-        alt = std::bitset<12>(tmp.substr(0, 6) + tmp.substr(7, 6)).to_ulong();//ft
-        alt = alt*3.28084;
-        frame.unit = 0;
+        // Format B: Metric altitude (meters)
+        alt = std::bitset<12>(tmp.substr(0, 6) + tmp.substr(7, 6)).to_ulong();
+        alt = alt * 1.0; // already in meters
+        frame.unit = 0; // meters
     }
     else if (tmp[6] == '0' && tmp[8] == '1')
     {
-        alt = std::bitset<11>(tmp.substr(0, 6) + tmp.substr(7, 1) + tmp.substr(9, 4)).to_ulong() * 25 - 1000;//ft
-        frame.unit = 0;
-        // alt *= 0.3048;
+        // Format A: Barometric altitude (feet)
+        alt = std::bitset<11>(tmp.substr(0, 6) + tmp.substr(7, 1) + tmp.substr(9, 4)).to_ulong() * 25 - 1000;
+        frame.unit = 1; // feet
     }
     return alt;
 }
@@ -526,18 +529,24 @@ double cprDlonFunction(double lat, int isodd) {
     return 360.0 / cprNFunction(lat, isodd);
 }
 int adsb_decoder::modesMessageLenByType(int type) {
-    if (type == 16 || type == 17 ||
-        type == 19 || type == 20 ||
-        type == 21 || type == 22 ||
-        type == 18)
-        return MODES_LONG_MSG_BITS;
-    else
-        if (type == 0 || type == 4 ||
-            type == 5 || type == 11 ||
-            type == 21)
+    // DF types and their message lengths
+    switch (type) {
+        case 16:
+        case 17:
+        case 18:
+        case 19:
+        case 20:
+        case 21:
+        case 22:
+            return MODES_LONG_MSG_BITS;
+        case 0:
+        case 4:
+        case 5:
+        case 11:
             return MODES_SHORT_MSG_BITS;
-        else
+        default:
             return 0;
+    }
 }
 int cprModFunction(int a, int b) {
     int res = a % b;
@@ -607,10 +616,13 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                         break;
                     case 4:
                         frame.category = planeCategory_::Ground_obstruction;
+                        break;
                     case 5:
                         frame.category = planeCategory_::Ground_obstruction;
+                        break;
                     case 6:
                         frame.category = planeCategory_::Ground_obstruction;
+                        break;
                     case 7:
                         frame.category = planeCategory_::Ground_obstruction;
                         break;
@@ -683,8 +695,7 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                 frame.latcpr = adsb_decoder::cpr_lat(msgbin);
                 frame.loncpr = adsb_decoder::cpr_lon(msgbin);
                 frame.movement = adsb_decoder::movement(msgbin);
-                if (frame.pre_lat==NULL)
-                    break;
+                // Only decode ground position if we have both odd and even frames
                 if (frame.cprflag)
                 {
                     //odd frame
@@ -699,53 +710,54 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                     frame.latcpr_even = adsb_decoder::cpr_lat(msgbin);
                     frame.loncpr_even = adsb_decoder::cpr_lon(msgbin);
                 }
-                // cal lat & lon
+                // cal lat & lon - Ground position CPR decode (TC=5-8)
                 if (abs((double)(frame.eventime - frame.oddtime)) / CLOCKS_PER_SEC<500000)
                 {
-                    //decode cpr
-                    float LAT_CPR_EVEN = frame.latcpr_even*1.0 / 131072;
-                    float LON_CPR_EVEN = frame.loncpr_even*1.0 / 131072;
-                    float LAT_CPR_ODD = frame.latcpr_odd*1.0 / 131072;
-                    float LON_CPR_ODD = frame.loncpr_odd*1.0 / 131072;
-                    int j = floor(59 * LAT_CPR_EVEN - 60 * LAT_CPR_ODD + 0.5);//latitude index
-                    float DLATE = 90 / 60, DLATO = 90 / 59;
-                    float LAT_EVEN = DLATE * (mod(j, 60) + LAT_CPR_EVEN);
-                    float LAT_ODD = DLATE * (mod(j, 59) + LAT_CPR_ODD);
-                    // if (LAT_EVEN >= 270) LAT_EVEN -= 360;
-                    // if (LAT_ODD >= 270) LAT_ODD -= 360;
-                    //check
-                    if (nlz(LAT_EVEN) != nlz(LAT_ODD))
+                    const double GroundDlat0 = 360.0 / 60;
+                    const double GroundDlat1 = 360.0 / 59;
+                    double lat0 = frame.latcpr_even;
+                    double lat1 = frame.latcpr_odd;
+                    double lon0 = frame.loncpr_even;
+                    double lon1 = frame.loncpr_odd;
+                    int j = floor(((59*lat0 - 60*lat1) / 131072) + 0.5);
+                    double rlat0 = GroundDlat0 * (cprModFunction(j,60) + lat0 / 131072);
+                    double rlat1 = GroundDlat1 * (cprModFunction(j,59) + lat1 / 131072);
+
+                    if (rlat0 >= 90) rlat0 -= 180;
+                    if (rlat1 >= 90) rlat1 -= 180;
+                    if (rlat0 < -90) rlat0 += 180;
+                    if (rlat1 < -90) rlat1 += 180;
+
+                    /* Check that both are in the same latitude zone, or abort. */
+                    if (cprNLFunction(rlat0) != cprNLFunction(rlat1))
                     {
                         //invalid
                         frame.lat = NULL;
                     }
                     else
                     {
-
-                        float latN = LAT_ODD, latS = LAT_ODD-90;
-                        if (abs(latN-frame.pre_lat)<=abs(latS-frame.pre_lat))
-                            frame.lat = latN;
-                        else
-                            frame.lat = latS;
-
-                        //check passed
-
+                        // Use the more recent frame
+                        if (frame.eventime > frame.oddtime)
                         {
-                            int ni = max(nlz(LAT_EVEN), 1);
-                            float DLON = 90 / ni;
-
-                            int m = floor(LON_CPR_EVEN * (nlz(LAT_EVEN - 1) - LON_CPR_ODD * nlz(LAT_EVEN) + 0.5));
-                            frame.lon = DLON * (mod(m, ni) + LON_CPR_EVEN);
+                            int ni = cprNFunction(rlat0, 0);
+                            int m = floor((((lon0 * (cprNLFunction(rlat0)-1)) -
+                                            (lon1 * cprNLFunction(rlat0))) / 131072) + 0.5);
+                            frame.lon = cprDlonFunction(rlat0, 0) * (cprModFunction(m, ni) + lon0 / 131072);
+                            frame.lat = rlat0;
                         }
-                        int n = (int)frame.pre_lon/90;
-                        while ((int)frame.lon/90!=n) {
-                            frame.lon += 90;
-                            if (frame.lon>360)
-                                frame.lon -= 360;
-
-                            }
+                        else
+                        {
+                            int ni = cprNFunction(rlat1, 1);
+                            int m = floor((((lon0 * (cprNLFunction(rlat1)-1)) -
+                                            (lon1 * cprNLFunction(rlat1))) / 131072.0) + 0.5);
+                            frame.lon = cprDlonFunction(rlat1, 1) * (cprModFunction(m, ni) + lon1 / 131072);
+                            frame.lat = rlat1;
+                        }
+                        if (frame.lon >= 90)
+                            frame.lon = frame.lon - 180;
+                        if (frame.lon < -90)
+                            frame.lon = frame.lon + 180;
                     }
-
                 }
 
                 frame.heading = adsb_decoder::ground_track(msgbin)*360.0/128.0;
@@ -777,7 +789,7 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                     frame.latcpr_even = adsb_decoder::cpr_lat(msgbin);
                     frame.loncpr_even = adsb_decoder::cpr_lon(msgbin);
                 }
-                // cal lat & lon
+                // cal lat & lon - Airborne position CPR decode (TC=9-18)
                 if (abs((double)(frame.eventime - frame.oddtime)) / CLOCKS_PER_SEC<500000)
                 {
                     const double AirDlat0 = 360.0 / 60;
@@ -786,12 +798,14 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                     double lat1 = frame.latcpr_odd;
                     double lon0 = frame.loncpr_even;
                     double lon1 = frame.loncpr_odd;
-                    int j = floor(((59*lat0 - 60*lat1) / 131072) + 0.5);
-                    double rlat0 = AirDlat0 * (cprModFunction(j,60) + lat0 / 131072);
-                    double rlat1 = AirDlat1 * (cprModFunction(j,59) + lat1 / 131072);
+                    int j = floor(((59*lat0 - 60*lat1) / 131072.0) + 0.5);
+                    double rlat0 = AirDlat0 * (cprModFunction(j, 60) + lat0 / 131072.0);
+                    double rlat1 = AirDlat1 * (cprModFunction(j, 59) + lat1 / 131072.0);
 
-                    if (rlat0 >= 270) rlat0 -= 360;
-                    if (rlat1 >= 270) rlat1 -= 360;
+                    if (rlat0 >= 90) rlat0 -= 180;
+                    if (rlat1 >= 90) rlat1 -= 180;
+                    if (rlat0 < -90) rlat0 += 180;
+                    if (rlat1 < -90) rlat1 += 180;
 
                     /* Check that both are in the same latitude zone, or abort. */
                     if (cprNLFunction(rlat0) != cprNLFunction(rlat1))
@@ -801,27 +815,27 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                     }
                     else
                     {
-
-
                         //check passed
                         if (frame.eventime > frame.oddtime)
                         {
-                            int ni = cprNFunction(rlat0,0);
-                            int m = floor((((lon0 * (cprNLFunction(rlat0)-1)) -
-                                            (lon1 * cprNLFunction(rlat0))) / 131072) + 0.5);
-                            frame.lon = cprDlonFunction(rlat0,0) * (cprModFunction(m,ni)+lon0/131072);
+                            int ni = cprNFunction(rlat0, 0);
+                            int nlo = cprNLFunction(rlat0);
+                            int m = floor((((lon0 * (nlo - 1)) - (lon1 * nlo)) / 131072.0) + 0.5);
+                            frame.lon = cprDlonFunction(rlat0, 0) * (cprModFunction(m, ni) + lon0 / 131072.0);
                             frame.lat = rlat0;
                         }
                         else
                         {
-                            int ni = cprNFunction(rlat1,1);
-                            int m = floor((((lon0 * (cprNLFunction(rlat1)-1)) -
-                                            (lon1 * cprNLFunction(rlat1))) / 131072.0) + 0.5);
-                            frame.lon = cprDlonFunction(rlat1,1) * (cprModFunction(m,ni)+lon1/131072);
+                            int ni = cprNFunction(rlat1, 1);
+                            int nlo = cprNLFunction(rlat1);
+                            int m = floor((((lon0 * (nlo - 1)) - (lon1 * nlo)) / 131072.0) + 0.5);
+                            frame.lon = cprDlonFunction(rlat1, 1) * (cprModFunction(m, ni) + lon1 / 131072.0);
                             frame.lat = rlat1;
                         }
-                        if (frame.lon >= 180)
-                            frame.lon = frame.lon - 360;
+                        if (frame.lon >= 90)
+                            frame.lon = frame.lon - 180;
+                        if (frame.lon < -90)
+                            frame.lon = frame.lon + 180;
                     }
 
                 }
@@ -851,53 +865,53 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                     frame.latcpr_even = adsb_decoder::cpr_lat(msgbin);
                     frame.loncpr_even = adsb_decoder::cpr_lon(msgbin);
                 }
-                // cal lat & lon
+                // cal lat & lon - GNSS position CPR decode (TC=20-22)
                 if (abs((double)(frame.eventime - frame.oddtime)) / CLOCKS_PER_SEC<500000)
                 {
-                    //decode cpr
-                    float LAT_CPR_EVEN = frame.latcpr_even*1.0 / 131072;
-                    float LON_CPR_EVEN = frame.loncpr_even*1.0 / 131072;
-                    float LAT_CPR_ODD = frame.latcpr_odd*1.0 / 131072;
-                    float LON_CPR_ODD = frame.loncpr_odd*1.0 / 131072;
-                    int j = floor(59 * LAT_CPR_EVEN - 60 * LAT_CPR_ODD + 0.5);//latitude index
-                    float DLATE = 360 / 60, DLATO = 360 / 59;
-                    float LAT_EVEN = DLATE * (mod(j, 60) + LAT_CPR_EVEN);
-                    float LAT_ODD = DLATE * (mod(j, 59) + LAT_CPR_ODD);
-                    if (LAT_EVEN >= 270) LAT_EVEN -= 360;
-                    if (LAT_ODD >= 270) LAT_ODD -= 360;
-                    float LAT;
-                    //check
-                    if (nlz(LAT_EVEN) != nlz(LAT_ODD))
+                    const double AirDlat0 = 360.0 / 60;
+                    const double AirDlat1 = 360.0 / 59;
+                    double lat0 = frame.latcpr_even;
+                    double lat1 = frame.latcpr_odd;
+                    double lon0 = frame.loncpr_even;
+                    double lon1 = frame.loncpr_odd;
+                    int j = floor(((59*lat0 - 60*lat1) / 131072.0) + 0.5);
+                    double rlat0 = AirDlat0 * (cprModFunction(j, 60) + lat0 / 131072.0);
+                    double rlat1 = AirDlat1 * (cprModFunction(j, 59) + lat1 / 131072.0);
+
+                    if (rlat0 >= 90) rlat0 -= 180;
+                    if (rlat1 >= 90) rlat1 -= 180;
+                    if (rlat0 < -90) rlat0 += 180;
+                    if (rlat1 < -90) rlat1 += 180;
+
+                    /* Check that both are in the same latitude zone, or abort. */
+                    if (cprNLFunction(rlat0) != cprNLFunction(rlat1))
                     {
                         //invalid
                         frame.lat = NULL;
                     }
                     else
                     {
-                        if (frame.eventime > frame.oddtime)
-                            frame.lat = LAT_EVEN;
-                        else
-                            frame.lat = LAT_ODD;
-
                         //check passed
                         if (frame.eventime > frame.oddtime)
                         {
-                            int ni = max(nlz(LAT_EVEN), 1);
-                            float DLON = 360.0 / ni;
-
-                            int m = floor(LON_CPR_EVEN * (nlz(LAT_EVEN - 1) - LON_CPR_ODD * nlz(LAT_EVEN) + 0.5));
-                            frame.lon = DLON * (mod(m, ni) + LON_CPR_EVEN);
+                            int ni = cprNFunction(rlat0, 0);
+                            int nlo = cprNLFunction(rlat0);
+                            int m = floor((((lon0 * (nlo - 1)) - (lon1 * nlo)) / 131072.0) + 0.5);
+                            frame.lon = cprDlonFunction(rlat0, 0) * (cprModFunction(m, ni) + lon0 / 131072.0);
+                            frame.lat = rlat0;
                         }
                         else
                         {
-                            int ni = max(nlz(LAT_ODD) - 1, 1);
-                            float DLON = 360.0 / ni;
-
-                            int m = floor(LON_CPR_EVEN * (nlz(LAT_ODD - 1) - LON_CPR_ODD * nlz(LAT_ODD) + 0.5));
-                            frame.lon = DLON * (mod(m, ni) + LON_CPR_ODD);
+                            int ni = cprNFunction(rlat1, 1);
+                            int nlo = cprNLFunction(rlat1);
+                            int m = floor((((lon0 * (nlo - 1)) - (lon1 * nlo)) / 131072.0) + 0.5);
+                            frame.lon = cprDlonFunction(rlat1, 1) * (cprModFunction(m, ni) + lon1 / 131072.0);
+                            frame.lat = rlat1;
                         }
-                        if (frame.lon >= 180)
-                            frame.lon = frame.lon - 360;
+                        if (frame.lon >= 90)
+                            frame.lon = frame.lon - 180;
+                        if (frame.lon < -90)
+                            frame.lon = frame.lon + 180;
                     }
                 }
                 //cal alt
@@ -922,10 +936,11 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                     else
                         vsn_ = (vns(msgbin) - 1);
                     frame.velocity = sqrtf(vwe_ * vwe_ + vsn_ * vsn_);
-                    frame.heading = atan((vwe_*1.0 / vsn_)) * 180.0 / pi;
+                    // Use atan2 for proper quadrant handling, heading is clockwise from North
+                    frame.heading = atan2((double)vwe_, (double)vsn_) * 180.0 / pi;
                     if (frame.heading < 0)
                         frame.heading += 360.0;
-                    frame.vertical_rate = (vr(msgbin) - 1 * 64);
+                    frame.vertical_rate = (vr(msgbin) - 64) * 64.0;
                     frame.svr = svr(msgbin);
                 }
                 else
@@ -935,7 +950,7 @@ int adsb_decoder::decode(const std::string& msg_, const std::string& msgbin, str
                     if (hs(msgbin))
                         frame.heading = hdg(msgbin)*1.0 / 1024.0 * 360.0;
                     else
-                        frame.heading = NULL;
+                        frame.heading = -1.0; // No heading info
                 }
             }
             else if (tc == 28)
@@ -1196,51 +1211,33 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
         // emit writelog(str);
 
         frame->ICAO = tmp_icao;
-        // qDebug()<<tmp_icao;
         msgbin = hex2bin(str);
         if(gBuffer->contains(tmp_icao)) //已有
         {
-            {
-                // *last_frame = gBuffer->get(tmp_icao);
-                // last_frame->lastSeen = QDateTime::currentDateTime();
-                // gBuffer->update(tmp_icao,*last_frame);
-                // // buff[tmp_icao] = *last_frame;
-                // decode(str,msgbin,*last_frame);
-                // last_frame->msg = str;
-                // // struct ADSBFrame frame_cp = *frame;
-                // emit planeUpdate(*last_frame);
-            }
             *last_frame = gBuffer->get(tmp_icao);
             last_frame->lastSeen = QDateTime::currentDateTime();
-
-            // buff[tmp_icao] = *last_frame;
-            decode(str,msgbin,*last_frame);
-            gBuffer->update(tmp_icao,*last_frame);
+            decode(str, msgbin, *last_frame);
             last_frame->msg = str;
-            // struct ADSBFrame frame_cp = *frame;
+            gBuffer->update(tmp_icao, *last_frame);
             emit planeUpdate(*last_frame);
         }
         else //新增
         {
-            frame->delthis = 0;
-            frame->alt = 0;
-            frame->lon = 999;
-            frame->lat = 999;
-            frame->velocity = 0;
-            decode(str,msgbin,*frame);
-            frame->lastSeen = QDateTime::currentDateTime();
-            gBuffer->insert(frame->ICAO,*frame);
-            // buff.insert(frame->ICAO,*frame);
-            frame->msg = str;
-            // struct ADSBFrame frame_cp = *frame;
-            emit planeUpdate(*frame);
-            frame->alt = 0;
+            // 先设置pre_lat/pre_lon，这样decode才能正确解析CPR位置
             frame->pre_lat = pre_lat;
             frame->pre_lon = pre_lon;
-            frame->lon = 999;
-            frame->lat = 999;
-            frame->velocity = 0;
-
+            frame->hasPreLocation = (pre_lat != 0 || pre_lon != 0);
+            
+            frame->delthis = 0;
+            frame->oddtime = 0;
+            frame->eventime = 0;
+            
+            decode(str, msgbin, *frame);
+            frame->lastSeen = QDateTime::currentDateTime();
+            frame->msg = str;
+            
+            gBuffer->insert(frame->ICAO, *frame);
+            emit planeUpdate(*frame);
         }
         if (isInterruptionRequested()) {
             qDebug() << "Worker thread interrupted during task execution.";
@@ -1264,23 +1261,30 @@ void adsb_decoder::do_process(int16_t *I, int16_t *Q, long int length, long long
 ///////////////////////////////////////////////////
 float speed_for_df17(int a)
 {
-    if(a==0)
-        return NULL;
-    else if(a==1)
-        return 0.0;//stopped
-    else if(a<=8)
-        return 0.125*(a-1);
-    else if(a<=12)
-        return 0.25*(a-9)+1.0;
-    else if(a<=38)
-        return 0.5*(a-13)+2.0;
-    else if(a<=93)
-        return 1*(a-39)+15;
-    else if(a<=108)
-        return 2*(a-94)+70.0;
-    else if(a<=123)
-        return 5*(a-109)+100.0;
-    else if (a==124)
-        return 180;
-    else return NULL;
+    if (a == 0)
+        return -1.0; // No information
+    else if (a == 1)
+        return 0.0; // Stopped
+    else if (a <= 8)
+        return 0.125 * (a - 1);
+    else if (a <= 12)
+        return 0.25 * (a - 9) + 1.0;
+    else if (a <= 38)
+        return 0.5 * (a - 13) + 2.0;
+    else if (a <= 93)
+        return 1.0 * (a - 39) + 15;
+    else if (a <= 108)
+        return 2.0 * (a - 94) + 70.0;
+    else if (a <= 123)
+        return 5.0 * (a - 109) + 100.0;
+    else if (a == 124)
+        return 180.0;
+    else if (a == 125)
+        return -1.0; // No information
+    else if (a == 126)
+        return -1.0; // Reserved
+    else if (a == 127)
+        return -1.0; // Reserved
+    else
+        return -1.0; // Invalid
 }
